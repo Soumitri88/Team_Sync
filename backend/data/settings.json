@@ -1,0 +1,13 @@
+[
+  {
+    "id": "global_config",
+    "soc_name": "PloyWeb Autonomous SOC",
+    "alert_threshold": "medium",
+    "auto_correlate": true,
+    "canary_auto_isolate": true,
+    "blast_radius_depth": 3,
+    "api_rate_limit": 100,
+    "theme": "dark_navy",
+    "updated_at": "2026-11-20T09:06:28.421212"
+  }
+]

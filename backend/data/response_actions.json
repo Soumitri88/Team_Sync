@@ -1,0 +1,13 @@
+[
+  {
+    "id": "ACT-20261121075104-471",
+    "action_type": "disable_account",
+    "target": "david.webb",
+    "status": "EXECUTED_SIMULATED",
+    "timestamp": "2026-11-21T07:51:04.021546",
+    "operator": "SOC-Commander",
+    "title": "IAM Account Suspension & Token Revocation",
+    "details": "Simulated Active Directory account 'david.webb' set to Disabled. All active Kerberos TGT tickets purged from domain controllers.",
+    "mitigation_impact": "Nullifies compromised credentials and cuts session access."
+  }
+]

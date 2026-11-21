@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#070b14] text-slate-100;
+  }
+}
+
+/* Custom Cyber Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090e1a;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00f2fe;
+}
+
+/* Glassmorphism & Cyber Card */
+.cyber-card {
+  background: rgba(13, 21, 39, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 242, 254, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.cyber-card:hover {
+  border-color: rgba(0, 242, 254, 0.3);
+}
+
+.cyber-glow-cyan {
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+}
+
+.cyber-glow-purple {
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
+}
+
+.cyber-glow-red {
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.35);
+}
+
+/* Terminal Pulse */
+@keyframes cyberPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.pulse-dot {
+  animation: cyberPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* React Flow Dark Canvas overrides */
+.react-flow__background {
+  background-color: #070b14 !important;
+}
+
+.react-flow__controls button {
+  background-color: #0d1527 !important;
+  color: #00f2fe !important;
+  border-bottom: 1px solid #1b2a47 !important;
+}
+
+.react-flow__controls button:hover {
+  background-color: #18253f !important;
+}
+
+.react-flow__minimap {
+  background-color: #0d1527 !important;
+  border: 1px solid #1b2a47 !important;
+}
