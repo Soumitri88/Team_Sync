@@ -1,24 +1,46 @@
 [
   {
-    "id": "ACT-20261123055704-564",
-    "action_type": "isolate_device",
-    "target": "GW-VPN-EDGE-01",
+    "id": "ACT-20261123075601-877",
+    "action_type": "revoke_session",
+    "target": "david.webb",
     "status": "EXECUTED_SIMULATED",
-    "timestamp": "2026-11-23T05:57:04.161164",
-    "operator": "SOC-Commander",
-    "title": "Endpoint Network Containment",
-    "details": "Simulated 802.1X VLAN isolation applied to endpoint 'GW-VPN-EDGE-01'. Blocked all ingress/egress traffic except SOC telemetry port 8443.",
-    "mitigation_impact": "Halts lateral propagation and prevents attacker C2 egress."
+    "timestamp": "2026-11-23T07:56:01.035037",
+    "operator": "Autonomous-Incident-Response",
+    "title": "Custom SOC Playbook Countermeasure",
+    "details": "Executed custom mitigation action against 'david.webb'.",
+    "mitigation_impact": "Reduces environmental risk exposure."
   },
   {
-    "id": "ACT-20261123061549-860",
-    "action_type": "investigate_canaries",
-    "target": "Finance_Report_Canary.txt",
+    "id": "ACT-20261123075601-877",
+    "action_type": "enable_mfa",
+    "target": "david.webb",
     "status": "EXECUTED_SIMULATED",
-    "timestamp": "2026-11-23T06:15:49.380675",
-    "operator": "Alex Vance",
-    "title": "Canary Deception Forensics Extraction",
-    "details": "Simulated honey-token forensic memory dump collected for decoy 'Finance_Report_Canary.txt'. Extracted process PID and origin IP.",
-    "mitigation_impact": "Confirms attacker objective and validates deceptive telemetry."
+    "timestamp": "2026-11-23T07:56:01.035037",
+    "operator": "Autonomous-Incident-Response",
+    "title": "Custom SOC Playbook Countermeasure",
+    "details": "Executed custom mitigation action against 'david.webb'.",
+    "mitigation_impact": "Reduces environmental risk exposure."
+  },
+  {
+    "id": "ACT-20261123075601-694",
+    "action_type": "quarantine_host",
+    "target": "WS-ENGINEERING-07",
+    "status": "EXECUTED_SIMULATED",
+    "timestamp": "2026-11-23T07:56:01.035037",
+    "operator": "Autonomous-Incident-Response",
+    "title": "Custom SOC Playbook Countermeasure",
+    "details": "Executed custom mitigation action against 'WS-ENGINEERING-07'.",
+    "mitigation_impact": "Reduces environmental risk exposure."
+  },
+  {
+    "id": "ACT-20261123075601-185",
+    "action_type": "block_ip",
+    "target": "198.51.100.44",
+    "status": "EXECUTED_SIMULATED",
+    "timestamp": "2026-11-23T07:56:01.035037",
+    "operator": "Autonomous-Incident-Response",
+    "title": "Perimeter Firewall Ingress Drop",
+    "details": "Simulated boundary ACL rule deployed to Edge Gateway: DROP ip source '198.51.100.44' on all external interfaces.",
+    "mitigation_impact": "Prevents remote adversary from initiating new ingress TCP handshakes."
   }
 ]

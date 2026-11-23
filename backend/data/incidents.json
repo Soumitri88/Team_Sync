@@ -1,33 +1,53 @@
 [
   {
     "id": "INC-20261123-01",
-    "title": "Active Cyber Intrusion Campaign - GW-VPN-EDGE-01",
+    "title": "Active Cyber Intrusion Campaign - SRV-FINANCE-01",
     "severity": "critical",
-    "status": "active",
-    "created_at": "2026-11-23T05:48:29.709626",
-    "updated_at": "2026-11-23T05:48:29.774499",
-    "patient_zero": "GW-VPN-EDGE-01",
+    "status": "contained",
+    "created_at": "2026-11-23T07:51:09.918086",
+    "updated_at": "2026-11-23T07:56:00.953175",
+    "patient_zero": "SRV-FINANCE-01",
     "affected_devices": [
       "SRV-FINANCE-01",
-      "DC-CORP-01",
-      "WS-MARKETING-02",
-      "WS-ENGINEERING-07",
-      "GW-VPN-EDGE-01"
+      "GW-VPN-EDGE-01",
+      "WS-ENGINEERING-07"
     ],
     "affected_accounts": [
-      "david.webb",
-      "SYSTEM"
+      "SYSTEM",
+      "david.webb"
     ],
     "events_count": 8,
     "blast_radius_score": 100.0,
     "mitre_tactics": [
-      "T1078",
-      "T1021",
-      "T1005",
       "T1048",
+      "T1110",
+      "T1078",
       "T1068",
-      "T1110"
+      "T1021",
+      "T1005"
     ],
-    "summary": "Attack chain in progress. 5 devices and 2 accounts impacted across 6 MITRE ATT&CK techniques."
+    "summary": "Threat actively contained by automated SOC countermeasures. Systems quarantined.",
+    "contained_at": "2026-11-23T07:56:01.035037"
+  },
+  {
+    "id": "INC-20261123-01",
+    "title": "Active Cyber Intrusion Campaign - WS-ENGINEERING-07",
+    "severity": "low",
+    "status": "active",
+    "created_at": "2026-11-23T07:56:01.035037",
+    "updated_at": "2026-11-23T07:56:01.035037",
+    "patient_zero": "WS-ENGINEERING-07",
+    "affected_devices": [
+      "WS-ENGINEERING-07"
+    ],
+    "affected_accounts": [
+      "SOC-Commander"
+    ],
+    "events_count": 1,
+    "blast_radius_score": 15.0,
+    "mitre_tactics": [
+      "RESPONSE-CONTAIN"
+    ],
+    "summary": "Initial suspicious activity observed originating from 127.0.0.1 targeting WS-ENGINEERING-07."
   }
 ]

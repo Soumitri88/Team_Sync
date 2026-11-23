@@ -9,77 +9,84 @@ import {
   FileText, 
   CheckCircle2, 
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  Sparkles,
+  KeyRound,
+  Lock,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
 
-export const IncidentResponsePage = ({ onNavigate }) => {
-  const { actions, executeResponseAction, stats } = useSecurity();
+export function IncidentResponsePage({ onNavigate }) {
+  const { actions, executeResponseAction, runProtectionDemo, stats } = useSecurity();
   const { user } = useAuth();
   const [selectedTarget, setSelectedTarget] = useState({
-    isolate_device: 'WS-ENGINEERING-07',
-    disable_account: 'david.webb',
-    block_ip: '198.51.100.44',
-    review_logins: 'sarah.connor',
-    investigate_canaries: 'Finance_Report_Canary.txt',
+    review_logins: 'david.webb',
+    revoke_session: 'david.webb',
+    password_change: 'david.webb',
+    enable_mfa: 'david.webb',
+    quarantine_host: 'WS-ENGINEERING-07',
     generate_report: 'IR-AUTONOMOUS-CASE-01'
   });
   const [executing, setExecuting] = useState(null);
+  const [isRunningProtectionDemo, setIsRunningProtectionDemo] = useState(false);
   const [lastActionResult, setLastActionResult] = useState(null);
+  const [protectionDemoSuccess, setProtectionDemoSuccess] = useState(null);
 
   const responsePlaybooks = [
     {
-      id: 'isolate_device',
-      title: '1. Isolate Affected Device',
-      desc: 'Applies simulated 802.1X VLAN quarantine to halt lateral propagation while preserving memory state for forensic capture.',
-      icon: Server,
-      color: 'border-red-500/50 bg-red-950/20 text-red-300',
-      defaultTarget: 'WS-ENGINEERING-07',
-      options: ['WS-ENGINEERING-07', 'GW-VPN-EDGE-01', 'SRV-FINANCE-01', 'WS-MARKETING-02']
-    },
-    {
-      id: 'disable_account',
-      title: '2. Disable Compromised Account',
-      desc: 'Simulates Active Directory account suspension and purges active Kerberos TGT tickets across domain controllers.',
-      icon: UserX,
-      color: 'border-purple-500/50 bg-purple-950/20 text-purple-300',
-      defaultTarget: 'david.webb',
-      options: ['david.webb', 'sarah.connor', 'svc_backup', 'admin']
-    },
-    {
-      id: 'block_ip',
-      title: '3. Block Suspicious Adversary IP',
-      desc: 'Injects simulated boundary firewall ACL rule on edge gateway: DROP all ingress handshakes from external threat origin.',
-      icon: Slash,
-      color: 'border-amber-500/50 bg-amber-950/20 text-amber-300',
-      defaultTarget: '198.51.100.44',
-      options: ['198.51.100.44', '203.0.113.88', '192.0.2.14']
-    },
-    {
       id: 'review_logins',
-      title: '4. Deep Session & Token Audit',
-      desc: 'Enforces forced re-authentication and revokes OAuth refresh tokens across SSO IdP providers for affected accounts.',
+      title: '1. Review Suspicious Login Activity',
+      desc: 'Conduct automated forensic audit of all interactive sessions, authentication protocols (RDP/SSH/VPN), and IP geolocations for flagged credentials.',
       icon: Search,
-      color: 'border-cyan-500/50 bg-cyan-950/20 text-cyan-300',
-      defaultTarget: 'sarah.connor',
-      options: ['sarah.connor', 'david.webb', 'finance_auditor']
+      color: 'border-cyan-500/40 bg-cyan-950/20 text-cyan-300',
+      defaultTarget: 'david.webb',
+      options: ['david.webb', 'sarah.connor', 'admin', 'SYSTEM']
     },
     {
-      id: 'investigate_canaries',
-      title: '5. Tripwire Forensics & File Capture',
-      desc: 'Captures file handle locks and forensic hashes on tripwire decoys breached by adversary tools.',
-      icon: Bug,
-      color: 'border-pink-500/50 bg-pink-950/20 text-pink-300',
-      defaultTarget: 'Finance_Report_Canary.txt',
-      options: ['Finance_Report_Canary.txt', 'Admin_Credentials_Canary.txt', 'Backup_Configuration_Canary.txt']
+      id: 'revoke_session',
+      title: '2. Revoke Simulated Sessions',
+      desc: 'Purge active OAuth refresh tokens, invalidate Kerberos TGT tickets, and terminate active interactive RDP/WinRM user sessions.',
+      icon: UserX,
+      color: 'border-purple-500/40 bg-purple-950/20 text-purple-300',
+      defaultTarget: 'david.webb',
+      options: ['david.webb', 'sarah.connor', 'svc_backup']
+    },
+    {
+      id: 'password_change',
+      title: '3. Recommend Password Change',
+      desc: 'Issue automated mandatory credential reset flag in directory services, enforcing high-entropy password requirements across domain controllers.',
+      icon: KeyRound,
+      color: 'border-amber-500/40 bg-amber-950/20 text-amber-300',
+      defaultTarget: 'david.webb',
+      options: ['david.webb', 'sarah.connor', 'admin']
+    },
+    {
+      id: 'enable_mfa',
+      title: '4. Recommend Enabling Multi-Factor Auth',
+      desc: 'Enforce mandatory conditional access MFA requirement for all external and internal subnet authentication requests.',
+      icon: Lock,
+      color: 'border-blue-500/40 bg-blue-950/20 text-blue-300',
+      defaultTarget: 'david.webb',
+      options: ['david.webb', 'sarah.connor', 'SYSTEM']
+    },
+    {
+      id: 'quarantine_host',
+      title: '5. Isolate Device (Simulation Sandbox Only)',
+      desc: 'Applies simulated VLAN containment to sever lateral connectivity to finance and storage subnets while keeping forensic memory intact.',
+      icon: Server,
+      color: 'border-red-500/40 bg-red-950/20 text-red-300',
+      defaultTarget: 'WS-ENGINEERING-07',
+      options: ['WS-ENGINEERING-07', 'SRV-FINANCE-01', 'MOBILE-PIXEL-08', 'IPHONE-CORP-15']
     },
     {
       id: 'generate_report',
-      title: '6. Generate Incident Dossier',
-      desc: 'Finalizes investigation summary narrative, maps MITRE matrix, validates SHA-256 evidence chain, and seals dossier.',
+      title: '6. Generate Incident Report',
+      desc: 'Compiles end-to-end investigation dossier with MITRE ATT&CK mapping, timeline reconstruct, and SHA-256 evidence digests.',
       icon: FileText,
-      color: 'border-emerald-500/50 bg-emerald-950/20 text-emerald-300',
+      color: 'border-emerald-500/40 bg-emerald-950/20 text-emerald-300',
       defaultTarget: 'IR-AUTONOMOUS-CASE-01',
       options: ['IR-AUTONOMOUS-CASE-01']
     }
@@ -92,7 +99,7 @@ export const IncidentResponsePage = ({ onNavigate }) => {
     try {
       const record = await executeResponseAction(actionType, target, operator);
       setLastActionResult(record);
-      if (actionType === 'generate_report') {
+      if (actionType === 'generate_report' && onNavigate) {
         setTimeout(() => onNavigate('/reports'), 1200);
       }
     } finally {
@@ -100,61 +107,107 @@ export const IncidentResponsePage = ({ onNavigate }) => {
     }
   };
 
+  const handleRunProtectionDemo = async () => {
+    setIsRunningProtectionDemo(true);
+    setProtectionDemoSuccess(null);
+    try {
+      const result = await runProtectionDemo();
+      setProtectionDemoSuccess(result);
+    } finally {
+      setIsRunningProtectionDemo(false);
+    }
+  };
+
   return (
-    <div className="space-y-4 sm:space-y-6 pb-16 max-w-6xl mx-auto">
-      {/* Top Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-cyan-950/50 via-[#0d1527] to-[#090e1a] border border-cyan-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+    <div className="space-y-6 pb-16 max-w-6xl mx-auto">
+      {/* Top Banner with RUN PROTECTION DEMO Button */}
+      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-[#0d1629] to-[#090e1a] border border-cyan-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
-            <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-cyan-400" />
+          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck className="w-7 h-7 text-cyan-400" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 rounded border border-cyan-500/50 bg-cyan-950 text-cyan-300">
-                ACTIVE MITIGATION
+                SECURITY RESPONSE CENTER
               </span>
-              <h2 className="text-sm sm:text-base font-extrabold font-mono text-white">
-                Incident Response Playbooks
-              </h2>
+              <h1 className="text-base sm:text-lg font-extrabold text-white">
+                Autonomous Protective Playbooks
+              </h1>
             </div>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl font-sans">
-              Execute standardized SOC containment playbooks. All interventions are simulated safely inside the PloyWeb containment sandbox without touching real operating systems or network infrastructure.
+              Suggested protective actions generated automatically following multi-stage attack detection.
             </p>
           </div>
         </div>
 
-        {/* Action Count Pill */}
-        <div className="px-3.5 py-2 rounded-xl bg-[#070b14] border border-[#1b2a47] font-mono text-xs flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
-          <span className="text-slate-400">Executed Actions:</span>
-          <span className="text-cyan-400 font-extrabold text-sm">{actions.length}</span>
+        {/* Action Button: RUN PROTECTION DEMO */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-shrink-0">
+          <button
+            onClick={handleRunProtectionDemo}
+            disabled={isRunningProtectionDemo}
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+          >
+            <Sparkles className="w-4 h-4 fill-black text-black" />
+            <span>{isRunningProtectionDemo ? 'RUNNING CONTAINMENT...' : 'RUN PROTECTION DEMO'}</span>
+          </button>
         </div>
       </div>
 
+      {/* Safety Notice: Non-destructive Environment Disclaimer */}
+      <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 flex items-start gap-3">
+        <Info className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <span className="font-semibold text-cyan-300">Authorized Containment Safety Policy:</span>
+          <p className="text-slate-400 leading-relaxed text-[11px]">
+            Never execute potentially disruptive protection actions on a real device without explicit authorization. In PloyWeb, all isolation, session revocation, and quarantine operations are executed safely within the simulation sandbox environment without modifying production host hardware or networks.
+          </p>
+        </div>
+      </div>
+
+      {/* Protection Demo Success Alert */}
+      {protectionDemoSuccess && (
+        <div className="p-4 rounded-xl bg-emerald-950/90 border border-emerald-500/60 text-emerald-200 text-xs space-y-2 animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <span className="font-bold text-sm text-white">Threat Successfully Contained & Device Protected!</span>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/40">
+              STATUS: {protectionDemoSuccess.device_status}
+            </span>
+          </div>
+          <p className="text-[11px] text-emerald-300/90">
+            {protectionDemoSuccess.message} In simulation sandbox, sessions were revoked, MFA was enforced, and host WS-ENGINEERING-07 was quarantined.
+          </p>
+        </div>
+      )}
+
       {/* Execution Alert Toast */}
       {lastActionResult && (
-        <div className="p-3.5 rounded-xl bg-emerald-950/90 border border-emerald-500/80 text-emerald-300 font-mono text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-neon-cyan animate-fadeIn">
+        <div className="p-3.5 rounded-xl bg-cyan-950/90 border border-cyan-500/80 text-cyan-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-fadeIn">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
             <div>
               <span className="font-bold">Playbook Executed Successfully: </span>
               <span className="text-white">{lastActionResult.action_type}</span> on{' '}
               <span className="text-cyan-300">{lastActionResult.target}</span>
             </div>
           </div>
-          <span className="text-[10px] text-slate-400 self-end sm:self-auto">
+          <span className="text-[10px] text-slate-400 font-mono self-end sm:self-auto">
             Hash: {lastActionResult.integrity_hash?.slice(0, 16)}...
           </span>
         </div>
       )}
 
-      {/* Playbooks Grid */}
+      {/* Playbooks Grid: 6 Suggested Protective Actions */}
       <div>
-        <h3 className="text-xs sm:text-sm font-bold font-mono text-white mb-3 flex items-center gap-2">
+        <h2 className="text-xs sm:text-sm font-bold text-white mb-3 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-          <span>Recommended Incident Response Playbooks</span>
-        </h3>
+          <span>Recommended Protective Actions</span>
+        </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {responsePlaybooks.map((pb) => {
             const Icon = pb.icon;
             const isRunning = executing === pb.id;
@@ -162,27 +215,27 @@ export const IncidentResponsePage = ({ onNavigate }) => {
             return (
               <div
                 key={pb.id}
-                className={`p-4 sm:p-5 rounded-2xl border ${pb.color} flex flex-col justify-between transition-all duration-200 cyber-card`}
+                className={`p-5 rounded-2xl border ${pb.color} flex flex-col justify-between transition-all duration-200 bg-slate-900/60 hover:border-cyan-500/60`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div className="p-2 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center">
-                      <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-current" />
+                      <Icon className="w-5 h-5 text-current" />
                     </div>
                     <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">
                       PLAYBOOK #{pb.id.slice(0, 3)}
                     </span>
                   </div>
 
-                  <h4 className="text-xs sm:text-sm font-bold font-mono text-white mt-1">
+                  <h3 className="text-xs sm:text-sm font-bold text-white mt-1">
                     {pb.title}
-                  </h4>
-                  <p className="text-xs text-slate-300 font-sans my-2 leading-relaxed">
+                  </h3>
+                  <p className="text-xs text-slate-300 my-2 leading-relaxed">
                     {pb.desc}
                   </p>
 
                   {/* Target Selector */}
-                  <div className="mt-3 pt-3 border-t border-[#1b2a47]">
+                  <div className="mt-3 pt-3 border-t border-slate-800">
                     <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">
                       Action Target Entity:
                     </label>
@@ -203,14 +256,14 @@ export const IncidentResponsePage = ({ onNavigate }) => {
                 </div>
 
                 {/* Execution Button */}
-                <div className="mt-4 pt-3 border-t border-[#1b2a47] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <span className="text-[9px] font-mono text-slate-500">
+                <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-slate-500">
                     Safe Simulation
                   </span>
                   <button
                     onClick={() => handleExecute(pb.id)}
                     disabled={isRunning}
-                    className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-bold text-xs font-mono flex items-center justify-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
                   >
                     <span>{isRunning ? 'Executing...' : 'Execute Action'}</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -223,21 +276,21 @@ export const IncidentResponsePage = ({ onNavigate }) => {
       </div>
 
       {/* Response Audit Log Table */}
-      <div className="cyber-card p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3">
+      <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
-            <h3 className="text-xs sm:text-sm font-bold font-mono text-white">Containment Action Audit Trail</h3>
-            <p className="text-[11px] sm:text-xs text-slate-400 font-sans">Cryptographically hashed record of all mitigation interventions</p>
+            <h3 className="text-xs sm:text-sm font-bold text-white">Containment Action Audit Trail</h3>
+            <p className="text-xs text-slate-400">Cryptographically hashed record of all protective interventions</p>
           </div>
-          <span className="text-[11px] font-mono text-cyan-400">
+          <span className="text-xs font-mono text-cyan-400">
             {actions.length} Executed
           </span>
         </div>
 
-        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div className="overflow-x-auto -mx-5 px-5">
           <table className="w-full text-left text-xs font-mono min-w-[500px]">
             <thead>
-              <tr className="border-b border-[#1b2a47] text-slate-400 uppercase text-[10px]">
+              <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
                 <th className="py-2.5 px-3">Time</th>
                 <th className="py-2.5 px-3">Action Type</th>
                 <th className="py-2.5 px-3">Target</th>
@@ -246,11 +299,11 @@ export const IncidentResponsePage = ({ onNavigate }) => {
                 <th className="py-2.5 px-3 text-right">Integrity Hash</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1b2a47]/60">
+            <tbody className="divide-y divide-slate-800/60">
               {actions.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-500">
-                    No containment playbooks triggered yet. Select a playbook above to simulate intervention.
+                    No containment playbooks triggered yet. Click "RUN PROTECTION DEMO" above or select a playbook.
                   </td>
                 </tr>
               ) : (
@@ -285,4 +338,4 @@ export const IncidentResponsePage = ({ onNavigate }) => {
       </div>
     </div>
   );
-};
+}

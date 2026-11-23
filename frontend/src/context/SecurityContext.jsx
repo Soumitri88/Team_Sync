@@ -18,6 +18,7 @@ export const SecurityProvider = ({ children }) => {
   const [attackGraph, setAttackGraph] = useState({ nodes: [], edges: [], summary: {} });
   const [blastRadius, setBlastRadius] = useState(null);
   const [actions, setActions] = useState([]);
+  const [devices, setDevices] = useState([]);
   const [evidenceLedger, setEvidenceLedger] = useState({ total_records: 0, records: [] });
   const [ledgerAudit, setLedgerAudit] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -127,6 +128,18 @@ export const SecurityProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchDevices = useCallback(async () => {
+    try {
+      const res = await fetch('/api/devices');
+      if (res.ok) {
+        const data = await res.json();
+        setDevices(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch devices:', e);
+    }
+  }, []);
+
   const refreshAll = useCallback(async () => {
     await Promise.all([
       fetchDashboardStats(),
@@ -136,7 +149,8 @@ export const SecurityProvider = ({ children }) => {
       fetchCanaries(),
       fetchActions(),
       fetchEvidenceLedger(),
-      fetchSimulationState()
+      fetchSimulationState(),
+      fetchDevices()
     ]);
   }, [
     fetchDashboardStats,
@@ -146,7 +160,8 @@ export const SecurityProvider = ({ children }) => {
     fetchCanaries,
     fetchActions,
     fetchEvidenceLedger,
-    fetchSimulationState
+    fetchSimulationState,
+    fetchDevices
   ]);
 
   // Initial mount load
@@ -409,6 +424,88 @@ export const SecurityProvider = ({ children }) => {
     }
   };
 
+  // ==================== DEVICE MANAGEMENT ====================
+  const registerDevice = async (deviceData) => {
+    try {
+      const res = await fetch('/api/devices/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deviceData)
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setDevices((prev) => [saved, ...prev]);
+        return saved;
+      }
+    } catch (e) {
+      console.error('Failed to register device:', e);
+    }
+  };
+
+  const generateTestEvent = async (testData) => {
+    try {
+      const res = await fetch('/api/devices/generate-test-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testData)
+      });
+      if (res.ok) {
+        const evt = await res.json();
+        setEvents((prev) => [evt, ...prev]);
+        await refreshAll();
+        return evt;
+      }
+    } catch (e) {
+      console.error('Failed to generate test event:', e);
+    }
+  };
+
+  const importEvents = async (rawLogs) => {
+    try {
+      const res = await fetch('/api/events/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logs: rawLogs })
+      });
+      if (res.ok) {
+        const result = await res.json();
+        await refreshAll();
+        return result;
+      }
+    } catch (e) {
+      console.error('Failed to import events:', e);
+    }
+  };
+
+  // ==================== JUDGE & PROTECTION DEMOS ====================
+  const runJudgeDemo = async () => {
+    try {
+      const res = await fetch('/api/demo/judge', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        await refreshAll();
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } });
+        return data;
+      }
+    } catch (e) {
+      console.error('Failed to run judge demo:', e);
+    }
+  };
+
+  const runProtectionDemo = async () => {
+    try {
+      const res = await fetch('/api/incident-response/run-protection-demo', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        await refreshAll();
+        confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+        return data;
+      }
+    } catch (e) {
+      console.error('Failed to run protection demo:', e);
+    }
+  };
+
   // ==================== GUIDED DEMO MODE LOGIC ====================
   // 9 Required Steps:
   // 1. Suspicious login detected
@@ -540,12 +637,19 @@ export const SecurityProvider = ({ children }) => {
         attackGraph,
         blastRadius,
         actions,
+        devices,
         evidenceLedger,
         ledgerAudit,
         loading,
         activeAlert,
         setActiveAlert,
         refreshAll,
+        fetchDevices,
+        registerDevice,
+        generateTestEvent,
+        importEvents,
+        runJudgeDemo,
+        runProtectionDemo,
         startSimulation,
         pauseSimulation,
         resumeSimulation,

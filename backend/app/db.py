@@ -131,6 +131,7 @@ class DatabaseManager:
         self.incidents = JsonCollection("incidents.json")
         self.settings = JsonCollection("settings.json")
         self.simulation_state = JsonCollection("simulation_state.json")
+        self.devices = JsonCollection("devices.json")
         self._init_defaults()
 
     def _init_defaults(self):
@@ -148,46 +149,100 @@ class DatabaseManager:
                 "updated_at": datetime.utcnow().isoformat()
             })
 
+        # Default Registered Devices if empty
+        if self.devices.count_documents() == 0:
+            default_devices = [
+                {
+                    "id": "DEV-001",
+                    "name": "WS-ENGINEERING-07",
+                    "device_type": "windows",
+                    "os": "Windows 11 Enterprise (23H2)",
+                    "ip": "10.0.2.14",
+                    "status": "connected",
+                    "mode": "Simulated Telemetry Agent",
+                    "registered_at": datetime.utcnow().isoformat(),
+                    "last_seen": datetime.utcnow().isoformat(),
+                    "security_posture": "elevated_risk"
+                },
+                {
+                    "id": "DEV-002",
+                    "name": "MOBILE-PIXEL-08",
+                    "device_type": "android",
+                    "os": "Android 14 (Google Pixel 8)",
+                    "ip": "10.0.4.52",
+                    "status": "connected",
+                    "mode": "Simulated Mobile Agent",
+                    "registered_at": datetime.utcnow().isoformat(),
+                    "last_seen": datetime.utcnow().isoformat(),
+                    "security_posture": "nominal"
+                },
+                {
+                    "id": "DEV-003",
+                    "name": "IPHONE-CORP-15",
+                    "device_type": "ios",
+                    "os": "iOS 17.4 (iPhone 15 Pro)",
+                    "ip": "10.0.4.61",
+                    "status": "connected",
+                    "mode": "Sandbox Simulation Mode",
+                    "registered_at": datetime.utcnow().isoformat(),
+                    "last_seen": datetime.utcnow().isoformat(),
+                    "security_posture": "nominal"
+                },
+                {
+                    "id": "DEV-004",
+                    "name": "SRV-FINANCE-01",
+                    "device_type": "linux",
+                    "os": "Ubuntu 22.04 LTS",
+                    "ip": "10.0.3.11",
+                    "status": "connected",
+                    "mode": "Server Telemetry Stream",
+                    "registered_at": datetime.utcnow().isoformat(),
+                    "last_seen": datetime.utcnow().isoformat(),
+                    "security_posture": "critical_threat"
+                }
+            ]
+            self.devices.insert_many(default_devices)
+
         # Default Canary Files if empty
         if self.canaries.count_documents() == 0:
             default_canaries = [
                 {
                     "id": "CAN-001",
-                    "name": "Finance_Report_Canary.txt",
-                    "path": "/srv/shared/finance/Q3_Audit/Finance_Report_Canary.txt",
+                    "name": "financial_report_demo.txt",
+                    "path": "/srv/shared/finance/Q3_Audit/financial_report_demo.txt",
                     "host_device": "SRV-FINANCE-01",
                     "created_at": datetime.utcnow().isoformat(),
                     "tripped": False,
                     "tripped_at": None,
                     "tripped_by": None,
                     "tripped_ip": None,
-                    "description": "High-value decoy financial ledger designed to detect unauthorized lateral file access.",
+                    "description": "Harmless decoy financial audit spreadsheet detecting unauthorized lateral traversal.",
                     "file_type": "decoy_document"
                 },
                 {
                     "id": "CAN-002",
-                    "name": "Admin_Credentials_Canary.txt",
-                    "path": "/etc/security/vault/Admin_Credentials_Canary.txt",
+                    "name": "admin_credentials_demo.txt",
+                    "path": "/etc/security/vault/admin_credentials_demo.txt",
                     "host_device": "DC-CORP-01",
                     "created_at": datetime.utcnow().isoformat(),
                     "tripped": False,
                     "tripped_at": None,
                     "tripped_by": None,
                     "tripped_ip": None,
-                    "description": "Decoy credentials file containing honey-tokens on primary Domain Controller.",
+                    "description": "Fictional credential honey-token file monitoring domain controller probing.",
                     "file_type": "honey_credentials"
                 },
                 {
                     "id": "CAN-003",
-                    "name": "Backup_Configuration_Canary.txt",
-                    "path": "/opt/backup/cfg/Backup_Configuration_Canary.txt",
+                    "name": "confidential_demo.txt",
+                    "path": "/opt/backup/cfg/confidential_demo.txt",
                     "host_device": "DEV-STORAGE-03",
                     "created_at": datetime.utcnow().isoformat(),
                     "tripped": False,
                     "tripped_at": None,
                     "tripped_by": None,
                     "tripped_ip": None,
-                    "description": "Decoy infrastructure backup configuration file monitoring exfiltration attempts.",
+                    "description": "Harmless confidential dummy text file detecting exfiltration staging.",
                     "file_type": "decoy_infrastructure"
                 }
             ]

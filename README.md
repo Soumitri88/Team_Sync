@@ -1,87 +1,94 @@
 # PloyWeb – Autonomous Cyber Investigation & Attack Graph Reconstruction
 
-> **Enterprise AI-Assisted Cybersecurity Investigation, Deception Detection & Kill-Chain Reconstruction Platform**
+> **" PloyWeb does not just flag anomalies. It reconstructs the reality of an attack. "**
+>
+> Enterprise Autonomous Cybersecurity Investigation, Deception Detection & Kill-Chain Reconstruction Platform.
 
-PloyWeb transforms scattered, noisy security telemetry into a chronological, evidence-backed reconstruction of multi-stage cyberattacks. It provides interactive graph visualization (TraceGraph), automated blast radius quantification, Canary Twin deception detection, SHA-256 cryptographic evidence ledger verification, and actionable incident-response playbooks.
+PloyWeb transforms scattered, noisy security telemetry into a chronological, evidence-backed reconstruction of multi-stage cyberattacks. It provides interactive graph visualization (TraceGraph), automated blast radius quantification, Canary Twin deception detection, SHA-256 cryptographic evidence ledger verification, and actionable incident-response playbooks across Windows PC, Android mobile, and iOS simulation endpoints.
 
 ---
 
-## 🛡️ Key Features
+## 🌐 Live Access URLs (Single Responsive Application)
 
-### 1. 📊 Security Operations Center (SOC) Dashboard
+- **Public HTTPS URL (PC, Mobile, Tablet)**: `https://eb2fa0a2986608.app.lhr.life`
+- **Local Host URL (PC)**: `http://localhost:5173`
+- **Local Network URL**: `http://192.168.22.199:5173`
+- **Backend API Docs**: `http://localhost:8000/docs`
+
+---
+
+## 🛡️ Key Pages & Capabilities
+
+### 1. 🌐 Landing Page (`/landing`)
+- **Brand Identity & Philosophy**: Comprehensive introduction to autonomous cyber investigation.
+- **TraceGraph & Canary Twin Highlights**: Visual overview of signature graph reconstruction and deception tripwires.
+- **How It Works**: 4-step pipeline from telemetry ingestion to cryptographic evidence ledger sealing.
+- **Target Audience**: SOC Analysts, Enterprise SecOps, Compliance & Audit Teams.
+- **Quick Actions**: 1-click CTAs to Launch Dashboard, Run Hackathon Judge Demo, or explore Attack Lab.
+
+### 2. 📊 Security Operations Center (SOC) Dashboard (`/`)
 - **DEFCON Readiness Meter**: Dynamic real-time threat posture indicator (`DEFCON 1` Breach to `DEFCON 5` Nominal).
 - **Incident & KPI Telemetry**: Total ingested events, Critical/High/Medium/Low severity distributions, active incidents, affected devices, and tripped canary decoys.
-- **Threat Severity Distribution**: Interactive donut charts and bar graphs powered by Recharts with neon cyber aesthetic.
-- **Attack Timeline**: Chronological event stream displaying source/destination IPs, MITRE ATT&CK technique IDs, and SHA-256 digests.
+- **Threat Analytics Charts**: Interactive donut charts and bar graphs powered by Recharts with neon cyber aesthetic.
+- **Attack Timeline**: Chronological event stream displaying source/destination IPs, MITRE ATT&CK IDs, and SHA-256 digests.
 
-### 2. ⚡ Attack Simulator (Safe & Synthetic)
-- **5 Predefined Safe Scenarios**:
-  1. *Brute-Force Login Simulation* (`T1110`)
-  2. *Suspicious Login & Lateral Movement* (`T1078`, `T1046`, `T1021`)
-  3. *Privilege Escalation Simulation* (`T1057`, `T1134`, `T1068`)
-  4. *Suspicious File & Canary Decoy Access* (`T1083`, `T1005`)
-  5. *Full Multi-Stage APT Attack Simulation* (Kill-chain from initial access to data breach)
-- **Controls**: Start, Pause, Resume, Reset, Single-Step Forward, and Pacing Speed (`0.5x`, `1x`, `2x`, `5x`).
-- **Non-Destructive Guarantee**: Generates realistic synthetic logs in a controlled virtual environment. Never modifies physical files or host network settings.
+### 3. 📱 Device Monitoring & Telemetry Ingestion (`/devices`)
+- **Endpoint Inventory**: Live connection indicators and posture for Windows (`WS-ENGINEERING-07`), Android (`MOBILE-PIXEL-08`), iOS (`IPHONE-CORP-15`), and Linux (`SRV-FINANCE-01`).
+- **Endpoint Registration**: Register custom PC, Android, or iOS simulated devices.
+- **Safe Diagnostic Probes**: Generate non-destructive test telemetry on any registered device.
+- **Security Log Ingestion Tool**: Ingest JSON arrays or RFC 5424 Syslog records into the correlation engine.
+- **Compliance Guarantee**: Operates strictly with authorized test logs and controlled simulation telemetry.
 
-### 3. 🕸️ TraceGraph – Attack Reconstruction
-- **Interactive Graph Canvas**: Built with `@xyflow/react` (React Flow v12) and backed by **NetworkX** directed graph calculations.
-- **Kill-Chain Mapping**: Reconstructs the exact path:
-  $$\text{External Adversary} \longrightarrow \text{Compromised User} \longrightarrow \text{Patient Zero Device} \longrightarrow \text{Lateral Movement} \longrightarrow \text{Privilege Escalation} \longrightarrow \text{Canary Trap}$$
-- **Critical Path Highlighting**: NetworkX pathfinding isolates the primary attack trajectory.
-- **Clickable Evidence Inspector**: Clicking any node or animated edge reveals associated events, timestamps, protocols, and SHA-256 cryptographic signatures.
+### 4. ⚡ Attack Simulation Lab (`/simulation`) – MOST IMPORTANT
+- **Target Platform Selection**:
+  1. *Windows Computer* (`WS-ENGINEERING-07`) – 6-stage enterprise kill chain
+  2. *Android Mobile Device* (`MOBILE-PIXEL-08`) – 6-stage mobile attack chain
+  3. *iOS Mobile Device (Simulation Mode)* (`IPHONE-CORP-15`) – 6-stage sandbox simulation
+  4. *Hackathon Judge Demo* – Intentionally scrambled out-of-order logs demonstrating temporal correlation
+- **Prominent Controls**: `START SAFE ATTACK SIMULATION`, `Pause Simulation`, and `Reset Simulation`.
+- **6-Stage Kill Chain Visual Stepper**:
+  - *Stage 1*: Suspicious Login Attempt
+  - *Stage 2*: Privilege Escalation Indicator
+  - *Stage 3*: Lateral Movement Indicator
+  - *Stage 4*: Suspicious File Access (`financial_report_demo.txt`)
+  - *Stage 5*: Data Exfiltration Indicator
+  - *Stage 6*: Privilege Escalation Alert
 
-### 4. 🪤 Canary Twin – Deception Detection
-- **Simulated Decoy Traps**:
-  - `Finance_Report_Canary.txt` (`/srv/shared/finance/Q3_Audit/`)
-  - `Admin_Credentials_Canary.txt` (`/etc/security/vault/`)
-  - `Backup_Configuration_Canary.txt` (`/opt/backup/cfg/`)
-- **Tripwire Alerting**: Accessing any canary instantly trips a high-fidelity DEFCON 1 alert with zero false-positives.
-- **Interactive Controls**: "Simulate Attacker Access", "Rearm All Decoys", and "Deploy Custom Virtual Trap".
+### 5. 🕸️ TraceGraph – Attack Reconstruction (`/tracegraph`)
+- **Interactive Graph Canvas**: Directional edges mapping attacker, compromised accounts, devices, and attack stages.
+- **Temporal Correlation Ground Truth**: Reconstructs exact chronological order even when log events arrive out of order.
+- **Clickable Node Drawer**: Event name, timestamp, source, target, severity, MITRE ID, and SHA-256 evidence digest.
 
-### 5. 💥 Blast Radius & Exposure Analysis
-- **Patient Zero Identification**: Automatically pinpoints the initial breach host.
-- **Strict Distinction**:
-  - **Confirmed Compromised Assets**: Endpoints and accounts with verified malicious telemetry.
-  - **Suspected At-Risk Impact**: Connected network subnets, shared shares, and reachable domain controllers.
-- **Quantified Impact Score**: Dynamic percentage exposure meter (e.g. 87.5% - 98.5%).
-- **Containment Priority Queue**: Ordered list of hosts requiring immediate isolation.
+### 6. 🪤 Canary Twin – Deception Detection (`/canary-twin`)
+- **Fictional Tripwire Decoys**:
+  - `financial_report_demo.txt` (`/srv/shared/finance/Q3_Audit/`)
+  - `admin_credentials_demo.txt` (`/etc/security/vault/`)
+  - `confidential_demo.txt` (`/opt/backup/cfg/`)
+- **Instant Tripwire Alert**: Access triggers immediate DEFCON 1 alarm, SHA-256 evidence hash, and blast radius update.
 
-### 6. 🚨 Incident Response Center
-- **Simulated Playbooks**:
-  1. *Isolate Affected Device* (Simulated 802.1X VLAN quarantine)
-  2. *Disable Compromised Account* (Simulated Active Directory suspension & Kerberos ticket purge)
-  3. *Block Suspicious Ingress IP* (Boundary edge firewall drop rule)
-  4. *Review Suspicious Login Events* (Historical 48-hour authentication forensics)
-  5. *Investigate Accessed Canary Files* (Memory honey-token dump extraction)
-  6. *Generate Autonomous Incident Dossier*
-- **Audit Ledger**: Complete log of defensive interventions with operator signatures.
+### 7. 💥 Blast Radius & Exposure Analysis (`/blast-radius`)
+- **Patient Zero Identification**: Pinpoints the initial compromise vector.
+- **Exposure Metric**: Real-time quantified compromise percentage across subnets.
+- **Asset Hierarchy**: Strict separation of confirmed compromised assets and at-risk connected nodes.
 
-### 7. 🔐 Evidence Ledger (SHA-256 Integrity)
-- **Cryptographic Custody**: Every event receives a canonical SHA-256 hash.
-- **One-Click Ledger Verification**: Audits all stored events, computes Merkle root digest, and confirms 100% integrity.
-- **Interactive Anti-Forensic Tamper Simulation**:
-  - Simulate an adversary modifying a log record in the database.
-  - Run audit to watch cryptographic discrepancy detection flag the tampered record.
-  - One-click restore back to authentic state.
+### 8. 🚨 Security Response Center (`/incident-response`)
+- **1-Click Countermeasure**: Prominent `RUN PROTECTION DEMO` button executing automated containment.
+- **Suggested Protective Actions**:
+  1. Review suspicious login activity
+  2. Revoke simulated sessions
+  3. Recommend password changes
+  4. Recommend enabling multi-factor authentication
+  5. Isolate device only in simulation environment
+  6. Generate incident report
+- **Immutable Action Audit Ledger**: Cryptographically hashed record of all protective interventions.
 
-### 8. 📄 Investigation Reports
-- **Executive Summary Narrative**: Automated SOC finding synthesis.
-- **MITRE ATT&CK Matrix**: Technique categorization with knowledgebase links.
-- **Downloadable PDF Dossier**: Client-side PDF export with cryptographic seal (`jspdf`).
-- **JSON Export & Print**: Raw forensic dossier export.
+### 9. 🔐 Evidence Ledger (`/evidence`)
+- **SHA-256 Cryptographic Custody**: Canonical hashing for every security event.
+- **Integrity Verification**: One-click verification auditing all hashes.
+- **Anti-Forensic Tamper Simulator**: Demonstrates detection of modified database records and 1-click restore.
 
-### 9. 🚀 Guided 9-Step Demo Mode
-Walks evaluators through the complete end-to-end lifecycle with a persistent floating controller:
-1. *Suspicious Login Detected*
-2. *Lateral Movement Identified*
-3. *Privilege Escalation Detected*
-4. *Canary File Accessed*
-5. *Attack Graph Reconstructed*
-6. *Blast Radius Calculated*
-7. *Incident Response Recommendations Generated*
-8. *Evidence Hashes Verified*
-9. *Incident Report Generated*
+### 10. 📄 Investigation Reports (`/reports`)
+- Executive summary narrative, MITRE ATT&CK technique matrix, and downloadable PDF dossier.
 
 ---
 

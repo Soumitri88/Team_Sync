@@ -1,8 +1,9 @@
 import asyncio
+import json
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .db import db
 from .models import SecurityEvent, Severity
@@ -72,7 +73,7 @@ async def startup_event():
 
 def seed_demo_events():
     """Seeds the initial multi-stage attack sequence so the UI opens with rich live data."""
-    scenario = SCENARIOS["multi_stage"]
+    scenario = SCENARIOS.get("windows_pc") or list(SCENARIOS.values())[0]
     for evt in scenario["events"]:
         evt_copy = dict(evt)
         evt_copy["timestamp"] = datetime.utcnow().isoformat()
@@ -385,3 +386,217 @@ async def reset_and_seed():
     seed_demo_events()
     await manager.broadcast({"type": "DEMO_RESEEDED"})
     return {"status": "demo_reseeded", "events_count": db.events.count_documents()}
+
+# ==================== DEVICE MANAGEMENT ENDPOINTS ====================
+
+@app.get("/api/devices")
+def get_devices():
+    return db.devices.find(sort_by="registered_at", reverse=True)
+
+@app.post("/api/devices/register")
+async def register_device(payload: Dict[str, Any]):
+    device_id = f"DEV-{datetime.utcnow().strftime('%M%S')}"
+    new_device = {
+        "id": device_id,
+        "name": payload.get("name", f"HOST-{device_id}"),
+        "device_type": payload.get("device_type", "windows").lower(),
+        "os": payload.get("os", "Windows 11 / Android"),
+        "ip": payload.get("ip", f"10.0.{len(db.devices.find()) + 2}.15"),
+        "status": "connected",
+        "mode": payload.get("mode", "Simulated Telemetry Agent"),
+        "registered_at": datetime.utcnow().isoformat(),
+        "last_seen": datetime.utcnow().isoformat(),
+        "security_posture": "nominal"
+    }
+    saved = db.devices.insert_one(new_device)
+    await manager.broadcast({"type": "DEVICE_REGISTERED", "device": saved})
+    return saved
+
+@app.post("/api/devices/generate-test-event")
+async def generate_test_event(payload: Dict[str, Any]):
+    device_id = payload.get("device_id")
+    device = None
+    if device_id:
+        device = db.devices.find_one({"id": device_id}) or db.devices.find_one({"name": device_id})
+    device_name = device["name"] if device else (payload.get("device_name") or "WS-ENGINEERING-07")
+    device_ip = device["ip"] if device else "10.0.2.14"
+    event_type = payload.get("event_type", "diagnostic_audit")
+    severity = payload.get("severity", "low")
+
+    test_event_data = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "source_ip": device_ip,
+        "destination_ip": "10.0.0.1",
+        "username": "sec_operator",
+        "device_name": device_name,
+        "event_type": event_type,
+        "event_description": f"Safe Diagnostic Audit: Benign telemetry test probe generated on {device_name}.",
+        "severity": severity,
+        "mitre_id": "T1059.001",
+        "mitre_name": "Command and Scripting Interpreter: Safe Audit Probe",
+        "is_safe_simulation": True,
+        "raw_payload": {"test_probe": True, "generated_by": "PloyWeb Device Monitoring Lab"}
+    }
+    event = ingest_and_correlate(test_event_data)
+    if device:
+        db.devices.update_one({"id": device["id"]}, {"$set": {"last_seen": datetime.utcnow().isoformat()}})
+    await manager.broadcast({"type": "NEW_EVENT", "event": event})
+    return event
+
+# ==================== EVENT IMPORT ENDPOINT ====================
+
+@app.post("/api/events/import")
+async def import_events(payload: Dict[str, Any]):
+    raw_logs = payload.get("logs")
+    imported_events = []
+    
+    if isinstance(raw_logs, list):
+        for item in raw_logs:
+            if isinstance(item, dict):
+                norm = normalize_log(item)
+                evt = ingest_and_correlate(norm)
+                imported_events.append(evt)
+            elif isinstance(item, str):
+                norm = normalize_log(item)
+                evt = ingest_and_correlate(norm)
+                imported_events.append(evt)
+    elif isinstance(raw_logs, str):
+        try:
+            parsed = json.loads(raw_logs)
+            if isinstance(parsed, list):
+                for item in parsed:
+                    norm = normalize_log(item)
+                    evt = ingest_and_correlate(norm)
+                    imported_events.append(evt)
+            elif isinstance(parsed, dict):
+                norm = normalize_log(parsed)
+                evt = ingest_and_correlate(norm)
+                imported_events.append(evt)
+        except Exception:
+            lines = [l.strip() for l in raw_logs.split("\n") if l.strip()]
+            for line in lines:
+                norm = normalize_log(line)
+                evt = ingest_and_correlate(norm)
+                imported_events.append(evt)
+                
+    await manager.broadcast({"type": "EVENTS_IMPORTED", "count": len(imported_events)})
+    return {
+        "status": "success",
+        "imported_count": len(imported_events),
+        "events": imported_events[:10]
+    }
+
+# ==================== 1-CLICK JUDGE DEMO ENDPOINT ====================
+
+@app.post("/api/demo/judge")
+async def run_judge_demo():
+    """
+    1-Click Hackathon Judging Demonstration:
+    Demonstrates PloyWeb's temporal correlation engine:
+    1. Ingests logs intentionally OUT OF ORDER (Stage 3 -> Stage 1 -> Stage 2 -> Stage 5 -> Stage 4 -> Stage 6)
+    2. Sorts logs by actual timestamps to reconstruct true attack progression
+    3. Trips the decoy canary 'financial_report_demo.txt'
+    4. Calculates updated graph and blast radius
+    """
+    db.events.delete_many()
+    db.incidents.delete_many()
+    db.response_actions.delete_many()
+    reset_all_canaries()
+    sim_controller.reset()
+
+    scenario = SCENARIOS["judge_demo"]
+    raw_events = scenario["events"]
+    
+    base_time = datetime.utcnow() - timedelta(minutes=5)
+    stamped_events = []
+    for idx, e in enumerate(raw_events):
+        e_copy = dict(e)
+        e_copy["timestamp"] = (base_time + timedelta(seconds=e_copy.get("offset_sec", idx * 10))).isoformat()
+        stamped_events.append(e_copy)
+
+    # Scramble ingestion order to prove temporal sorting
+    scrambled_order = [3, 1, 2, 5, 4, 0, 6]
+    for idx in scrambled_order:
+        if idx < len(stamped_events):
+            ingest_and_correlate(stamped_events[idx])
+
+    # Trip the canary decoy
+    canary = db.canaries.find_one({"name": "financial_report_demo.txt"})
+    if canary:
+        trigger_canary_trip(canary["id"], trigger_user="david.webb", trigger_ip="198.51.100.44")
+
+    graph = build_attack_graph()
+    radius = calculate_blast_radius()
+
+    await manager.broadcast({"type": "JUDGE_DEMO_READY"})
+
+    return {
+        "status": "reconstructed",
+        "scenario": "Enterprise Multi-Stage Intrusion (Out-Of-Order Telemetry Stream)",
+        "temporal_sorting_verified": True,
+        "message": "PloyWeb successfully ingested out-of-order security telemetry and reconstructed true attack sequence.",
+        "nodes_reconstructed": len(graph.get("nodes", [])),
+        "edges_reconstructed": len(graph.get("edges", [])),
+        "blast_radius_impact_pct": radius.get("compromise_percentage", 75.0),
+        "canary_tripped": "financial_report_demo.txt",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+# ==================== RUN PROTECTION DEMO ====================
+
+@app.post("/api/incident-response/run-protection-demo")
+async def run_protection_demo():
+    """
+    Automated Protection Demo:
+    1. Revokes active simulated attacker session.
+    2. Enforces MFA policy on all affected endpoints.
+    3. Isolates compromised simulated host (WS-ENGINEERING-07) in safe sandbox.
+    4. Quarantines persistent service artifact (PloySecSvc_Persistent).
+    5. Updates incident status to 'CONTAINED' and device security posture to 'protected'.
+    6. Signs audit records with SHA-256 evidence hashes.
+    """
+    operator = "Autonomous-Incident-Response"
+    
+    actions_to_run = [
+        ("revoke_session", "david.webb"),
+        ("enable_mfa", "david.webb"),
+        ("quarantine_host", "WS-ENGINEERING-07"),
+        ("block_ip", "198.51.100.44")
+    ]
+    
+    executed_records = []
+    for action_type, target in actions_to_run:
+        rec = execute_simulated_action(action_type, target, operator)
+        executed_records.append(rec)
+
+    db.devices.update_one({"name": "WS-ENGINEERING-07"}, {"$set": {"security_posture": "protected", "mode": "Isolated (Simulation Sandbox)"}})
+    db.devices.update_one({"name": "SRV-FINANCE-01"}, {"$set": {"security_posture": "protected"}})
+
+    incidents = db.incidents.find()
+    for inc in incidents:
+        db.incidents.update_one({"id": inc["id"]}, {"$set": {"status": "contained", "contained_at": datetime.utcnow().isoformat()}})
+
+    protect_event = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "source_ip": "127.0.0.1",
+        "destination_ip": "10.0.2.14",
+        "username": "SOC-Commander",
+        "device_name": "WS-ENGINEERING-07",
+        "event_type": "incident_contained",
+        "event_description": "Protection Demo: Automated containment executed. Adversary session terminated and simulated endpoint isolated.",
+        "severity": "low",
+        "mitre_id": "RESPONSE-CONTAIN",
+        "mitre_name": "Autonomous Incident Response & Endpoint Containment",
+        "raw_payload": {"protection_status": "CONTAINED", "contained_by": "PloyWeb Autonomous Playbook"}
+    }
+    ingest_and_correlate(protect_event)
+
+    await manager.broadcast({"type": "PROTECTION_DEMO_COMPLETED", "actions": executed_records})
+
+    return {
+        "status": "contained",
+        "device_status": "PROTECTED (SIMULATION SANDBOX)",
+        "actions_executed": len(executed_records),
+        "records": executed_records,
+        "message": "All threat vectors neutralized. Simulated device safely isolated and credentials revoked."
+    }

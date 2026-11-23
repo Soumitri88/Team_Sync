@@ -14,6 +14,8 @@ import {
   LogOut,
   ChevronRight,
   ShieldAlert,
+  Globe,
+  Laptop,
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -24,7 +26,9 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
   const { stats, startDemo, demoActive } = useSecurity();
 
   const mainNav = [
+    { id: 'landing', label: 'Platform Overview', path: '/landing', icon: Globe },
     { id: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { id: 'devices', label: 'Device Monitoring', path: '/devices', icon: Laptop },
     { id: 'simulation', label: 'Attack Simulator', path: '/simulation', icon: Flame },
     { id: 'tracegraph', label: 'Attack Path (Graph)', path: '/tracegraph', icon: Network },
     { id: 'blast-radius', label: 'Impact & Blast Radius', path: '/blast-radius', icon: Activity },

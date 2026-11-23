@@ -9,10 +9,11 @@ import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
 
 export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
-  const { stats, refreshAll, demoActive, startDemo, activeAlert, setActiveAlert } = useSecurity();
+  const { stats, refreshAll, demoActive, startDemo, runJudgeDemo, activeAlert, setActiveAlert } = useSecurity();
   const { user } = useAuth();
   const [time, setTime] = useState(new Date().toUTCString().slice(17, 25));
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isJudgeRunning, setIsJudgeRunning] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -33,6 +34,10 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
     switch (path) {
       case '/':
         return { full: 'Dashboard Overview', short: 'Dashboard' };
+      case '/landing':
+        return { full: 'PloyWeb Platform Overview', short: 'Overview' };
+      case '/devices':
+        return { full: 'Device Monitoring & Telemetry Ingestion', short: 'Devices' };
       case '/simulation':
         return { full: 'Attack Simulator', short: 'Simulator' };
       case '/tracegraph':
@@ -108,6 +113,23 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
             className="p-1.5 sm:p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
+          </button>
+
+          {/* 1-Click Judge Demo Button */}
+          <button
+            onClick={async () => {
+              setIsJudgeRunning(true);
+              await runJudgeDemo();
+              setIsJudgeRunning(false);
+              onNavigate('/tracegraph');
+            }}
+            disabled={isJudgeRunning}
+            title="Ingests out-of-order logs, trips canaries, and reconstructs attack graph for hackathon evaluation"
+            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all border border-purple-400/30 disabled:opacity-50"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+            <span className="hidden sm:inline">{isJudgeRunning ? 'Reconstructing...' : 'Judge Demo'}</span>
+            <span className="sm:hidden">Judge</span>
           </button>
 
           {/* Run Demo Button */}

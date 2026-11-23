@@ -4,7 +4,9 @@ import { Navbar } from './components/Navbar';
 import { DemoTourBar } from './components/DemoTourBar';
 import { EvidenceModal } from './components/EvidenceModal';
 import { LoginPage } from './pages/LoginPage';
+import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { DeviceMonitoringPage } from './pages/DeviceMonitoringPage';
 import { SimulationPage } from './pages/SimulationPage';
 import { EventsPage } from './pages/EventsPage';
 import { TraceGraphPage } from './pages/TraceGraphPage';
@@ -41,6 +43,10 @@ export function App() {
     switch (currentPath) {
       case '/':
         return <DashboardPage onNavigate={handleNavigate} onInspectEvidence={handleInspectEvidence} />;
+      case '/landing':
+        return <LandingPage onNavigate={handleNavigate} />;
+      case '/devices':
+        return <DeviceMonitoringPage onInspectEvidence={handleInspectEvidence} />;
       case '/simulation':
         return <SimulationPage onNavigate={handleNavigate} onInspectEvidence={handleInspectEvidence} />;
       case '/events':

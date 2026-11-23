@@ -5,11 +5,21 @@ import {
   Pause, 
   RotateCcw, 
   SkipForward, 
-  ShieldCheck 
+  ShieldCheck,
+  Laptop,
+  Smartphone,
+  Sparkles,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  ShieldAlert,
+  Zap,
+  Activity
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 
-export const SimulationPage = ({ onInspectEvidence }) => {
+export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
   const { 
     simState, 
     startSimulation, 
@@ -17,47 +27,62 @@ export const SimulationPage = ({ onInspectEvidence }) => {
     resumeSimulation, 
     stepSimulation, 
     resetSimulation, 
-    events 
+    events,
+    stats 
   } = useSecurity();
 
-  const [selectedScenario, setSelectedScenario] = useState('full_killchain');
+  const [selectedScenario, setSelectedScenario] = useState('windows_pc');
 
-  const scenariosList = [
+  const TARGET_PLATFORMS = [
     {
-      id: 'full_killchain',
-      title: '1. Multi-Stage Enterprise Intrusion (Kill-Chain)',
-      desc: 'Simulates VPN password spraying, initial access, privilege escalation, lateral pivot to engineering workstations, and decoy canary document breach.',
-      severity: 'Critical',
-      badge: '5 Stages'
+      id: 'windows_pc',
+      name: 'Windows Computer',
+      target: 'WS-ENGINEERING-07',
+      os: 'Windows 11 Enterprise (23H2)',
+      icon: Laptop,
+      desc: 'Enterprise Windows kill-chain: RDP credential abuse -> LSASS token elevation -> WinRM lateral traversal -> Canary breach -> C2 exfiltration -> Service persistence.',
+      badge: '6 Stages',
+      severity: 'Critical'
     },
     {
-      id: 'ransomware_canary',
-      title: '2. Ransomware Staging & Canary Trip',
-      desc: 'Adversary stages batch encryptor scripts in shared file storage and triggers an active tripwire canary trap.',
-      severity: 'Critical',
-      badge: '3 Stages'
+      id: 'android_mobile',
+      name: 'Android Mobile Device',
+      target: 'MOBILE-PIXEL-08',
+      os: 'Android 14 (Google Pixel 8)',
+      icon: Smartphone,
+      desc: 'Mobile enterprise chain: Sideloaded APK authentication -> Binder token privesc -> Subnet discovery -> Honey-token Canary -> C2 exfiltration -> Boot receiver persistence.',
+      badge: '6 Stages',
+      severity: 'Critical'
     },
     {
-      id: 'credential_dump',
-      title: '3. LSASS Memory Injection & Credential Theft',
-      desc: 'Post-compromise memory dump of LSASS subsystem on a secondary workstation and Kerberos ticket extraction.',
-      severity: 'High',
-      badge: '2 Stages'
+      id: 'ios_mobile',
+      name: 'iOS Mobile Device (Simulation Mode)',
+      target: 'IPHONE-CORP-15',
+      os: 'iOS 17.4 (Sandbox Simulation)',
+      icon: Smartphone,
+      desc: 'Safe iOS sandbox simulation: MDM configuration exploit -> WebKit JIT escape -> Container traversal -> Decoy confidential file access -> DNS tunneling exfil -> Kernel flag.',
+      badge: '6 Stages',
+      severity: 'High'
     },
     {
-      id: 'insider_exfil',
-      title: '4. Insider Threat & Sensitive Data Exfiltration',
-      desc: 'Simulated authorized engineer accessing abnormal financial database files and staging external transfer.',
-      severity: 'High',
-      badge: '3 Stages'
-    },
-    {
-      id: 'cloud_token_abuse',
-      title: '5. Cloud IAM Metadata Token Abuse',
-      desc: 'Workload identity exploitation retrieving short-lived AWS/GCP session credentials from an exposed microservice.',
-      severity: 'Critical',
-      badge: '3 Stages'
+      id: 'judge_demo',
+      name: 'Hackathon Judge Demo',
+      target: 'WS-ENGINEERING-07',
+      os: 'Out-Of-Order Telemetry Stream',
+      icon: Sparkles,
+      desc: 'Intentionally delivers logs out of order to demonstrate PloyWeb temporal correlation engine, dynamic TraceGraph reconstruction, and SHA-256 evidence integrity.',
+      badge: 'Judge Special',
+      severity: 'Critical'
     }
+  ];
+
+  const KILL_CHAIN_STAGES = [
+    { stage: 1, name: 'Suspicious Login Attempt', desc: 'Anomalous credential abuse / initial access' },
+    { stage: 2, name: 'Privilege Escalation Indicator', desc: 'Token elevation / sandbox breakout' },
+    { stage: 3, name: 'Lateral Movement Indicator', desc: 'Pivot to internal subnets / storage' },
+    { stage: 4, name: 'Suspicious File Access', desc: 'Canary decoy trap accessed' },
+    { stage: 5, name: 'Data Exfiltration Indicator', desc: 'Covert egress / C2 channel' },
+    { stage: 6, name: 'Privilege Escalation Alert', desc: 'Root persistence / daemon scheduled' }
   ];
 
   const statusText = simState && simState.status ? String(simState.status).toUpperCase() : 'IDLE';
@@ -65,132 +90,113 @@ export const SimulationPage = ({ onInspectEvidence }) => {
   const isPaused = simState && simState.status === 'paused';
   const progressPct = simState && typeof simState.progress_pct === 'number' ? simState.progress_pct : 0;
   const currentStep = simState && typeof simState.current_step === 'number' ? simState.current_step : 0;
-  const totalSteps = simState && typeof simState.total_steps === 'number' ? simState.total_steps : 0;
+  const totalSteps = simState && typeof simState.total_steps === 'number' ? simState.total_steps : 6;
 
   const handleStart = () => {
     startSimulation(selectedScenario, 1.0);
   };
 
+  const getStageStatus = (stageNum) => {
+    if (progressPct >= (stageNum / 6) * 100) return 'completed';
+    if (progressPct >= ((stageNum - 1) / 6) * 100 && isRunning) return 'in_progress';
+    return 'pending';
+  };
+
   return (
-    <div className="space-y-4 sm:space-y-6 pb-16 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-6 pb-16 max-w-6xl mx-auto">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
         <div>
           <div className="flex items-center gap-2">
-            <Flame className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-sm sm:text-base font-bold text-white">
-              Attack Simulator
-            </h2>
+            <Flame className="w-6 h-6 text-cyan-400" />
+            <h1 className="text-lg sm:text-xl font-bold text-white">
+              Attack Simulation Lab
+            </h1>
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-            Select an attack scenario to safely generate live security telemetry for analysis
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Safe, non-destructive enterprise and mobile threat demonstration powered by controlled telemetry.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-slate-400">Status:</span>
-          <span
-            className={
-              isRunning
-                ? 'px-2.5 py-0.5 rounded-full font-semibold uppercase bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse'
-                : 'px-2.5 py-0.5 rounded-full font-semibold uppercase bg-slate-800 text-slate-300'
-            }
-          >
-            {statusText}
-          </span>
-        </div>
-      </div>
-
-      {/* Controller Card */}
-      <div className="cyber-card p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-4">
-        <div>
-          <div className="flex items-center justify-between text-xs text-slate-300 mb-1.5 font-medium">
-            <span>Simulation Progress</span>
-            <span>Step {currentStep} / {totalSteps} ({progressPct}%)</span>
-          </div>
-          <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-            <div
-              className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-300"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Action Controls */}
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 pt-1 w-full sm:w-auto">
-          {!isRunning ? (
-            <button
-              onClick={isPaused ? resumeSimulation : handleStart}
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-400">Status:</span>
+            <span
+              className={
+                isRunning
+                  ? 'px-3 py-1 rounded-full font-bold uppercase text-[11px] bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse'
+                  : 'px-3 py-1 rounded-full font-bold uppercase text-[11px] bg-slate-800 text-slate-300 border border-slate-700'
+              }
             >
-              <Play className="w-3.5 h-3.5 fill-black" />
-              <span>{isPaused ? 'Resume Attack' : 'Start Simulation'}</span>
-            </button>
-          ) : (
+              {statusText}
+            </span>
+          </div>
+
+          {events.length > 0 && onNavigate && (
             <button
-              onClick={pauseSimulation}
-              className="col-span-2 sm:col-span-1 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all"
+              onClick={() => onNavigate('/tracegraph')}
+              className="px-3.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
             >
-              <Pause className="w-3.5 h-3.5 fill-black" />
-              <span>Pause Attack</span>
+              <span>View in TraceGraph</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
-
-          <button
-            onClick={stepSimulation}
-            className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-          >
-            <SkipForward className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Step Next Event</span>
-            <span className="sm:hidden">Step Next</span>
-          </button>
-
-          <button
-            onClick={resetSimulation}
-            className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-red-950/40 text-slate-400 hover:text-red-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset</span>
-          </button>
         </div>
       </div>
 
-      {/* Scenarios Grid */}
-      <div>
-        <h3 className="text-xs sm:text-sm font-bold text-white mb-3">Choose a Scenario to Simulate</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
-          {scenariosList.map((sc) => {
-            const isSelected = selectedScenario === sc.id;
+      {/* Safety & Non-destructive Guarantee Notice */}
+      <div className="p-4 rounded-xl bg-slate-900/60 border border-cyan-500/20 text-xs text-slate-300 flex items-start gap-3">
+        <Info className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <span className="font-semibold text-cyan-300">Non-Destructive Simulation Guarantee:</span>
+          <p className="text-slate-400 leading-relaxed text-[11px]">
+            All simulated scenarios generate harmless synthetic telemetry and read authorized test logs. PloyWeb never installs malware, executes exploits, steals credentials, encrypts files, or damages physical devices.
+          </p>
+        </div>
+      </div>
+
+      {/* Target Device Selection Tabs */}
+      <div className="space-y-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          Step 1: Select Target Device & Simulation Scenario
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {TARGET_PLATFORMS.map((platform) => {
+            const isSelected = selectedScenario === platform.id;
+            const Icon = platform.icon;
             return (
               <div
-                key={sc.id}
-                onClick={() => setSelectedScenario(sc.id)}
-                className={
+                key={platform.id}
+                onClick={() => setSelectedScenario(platform.id)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-3 ${
                   isSelected
-                    ? 'p-3.5 sm:p-4 rounded-xl border cursor-pointer transition-all bg-cyan-950/30 border-cyan-500 shadow-sm'
-                    : 'p-3.5 sm:p-4 rounded-xl border cursor-pointer transition-all cyber-card border-slate-800 hover:border-slate-700'
-                }
+                    ? 'bg-cyan-950/40 border-cyan-500 shadow-md shadow-cyan-500/10 ring-1 ring-cyan-500/50'
+                    : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                }`}
               >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className="text-xs font-bold text-white">{sc.title}</div>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold flex-shrink-0">
-                    {sc.badge}
-                  </span>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center">
+                      <Icon className={`w-4 h-4 ${isSelected ? 'text-cyan-400' : 'text-slate-300'}`} />
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                      {platform.badge}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-sm text-white">{platform.name}</h3>
+                    <p className="text-[10px] text-cyan-400 font-mono mt-0.5">{platform.target}</p>
+                    <p className="text-[11px] text-slate-400 mt-1 line-clamp-3">{platform.desc}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed mt-1">
-                  {sc.desc}
-                </p>
-                <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                  <span
-                    className={
-                      sc.severity === 'Critical'
-                        ? 'text-[10px] font-bold uppercase text-red-400'
-                        : 'text-[10px] font-bold uppercase text-amber-400'
-                    }
-                  >
-                    {sc.severity} Severity
+
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                  <span className="text-[10px] font-bold uppercase text-red-400">
+                    {platform.severity}
                   </span>
-                  <span className={isSelected ? 'font-semibold text-xs text-cyan-400' : 'font-semibold text-xs text-slate-500'}>
+                  <span className={`text-xs font-semibold ${isSelected ? 'text-cyan-400' : 'text-slate-500'}`}>
                     {isSelected ? '✓ Selected' : 'Select'}
                   </span>
                 </div>
@@ -200,43 +206,171 @@ export const SimulationPage = ({ onInspectEvidence }) => {
         </div>
       </div>
 
-      {/* Generated Logs Preview */}
-      <div className="cyber-card p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3">
+      {/* Main Simulation Controller Card */}
+      <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+              Step 2: Control Simulation & Ingestion Stream
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Launch real-time telemetry stream or step through events sequentially.
+            </p>
+          </div>
+
+          <div className="text-xs font-mono text-cyan-300 bg-cyan-950/60 px-3 py-1.5 rounded-lg border border-cyan-500/30">
+            Progress: Step {currentStep} / {totalSteps} ({Math.round(progressPct)}%)
+          </div>
+        </div>
+
+        {/* Real-time Progress Bar */}
+        <div className="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+          <div
+            className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 transition-all duration-300"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+
+        {/* Controller Buttons: Prominent START SAFE ATTACK SIMULATION */}
+        <div className="flex flex-wrap items-center gap-3">
+          {!isRunning ? (
+            <button
+              onClick={isPaused ? resumeSimulation : handleStart}
+              className="px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20 active:scale-95"
+            >
+              <Play className="w-4 h-4 fill-black" />
+              <span>{isPaused ? 'RESUME SIMULATION' : 'START SAFE ATTACK SIMULATION'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={pauseSimulation}
+              className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/20 active:scale-95"
+            >
+              <Pause className="w-4 h-4 fill-black" />
+              <span>PAUSE SIMULATION</span>
+            </button>
+          )}
+
+          <button
+            onClick={stepSimulation}
+            className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 border border-slate-700 transition-colors"
+          >
+            <SkipForward className="w-4 h-4 text-cyan-400" />
+            <span>Step Forward</span>
+          </button>
+
+          <button
+            onClick={resetSimulation}
+            className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-red-950/50 text-slate-400 hover:text-red-400 text-xs font-semibold flex items-center justify-center gap-2 border border-slate-700 transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>Reset Simulation</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 6-Stage Visual Kill-Chain Stepper */}
+      <div className="space-y-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          Kill-Chain Progression: 6 Reconstructed Attack Stages
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {KILL_CHAIN_STAGES.map((s) => {
+            const stageStatus = getStageStatus(s.stage);
+            return (
+              <div
+                key={s.stage}
+                className={`p-3.5 rounded-xl border transition-all ${
+                  stageStatus === 'completed'
+                    ? 'bg-cyan-950/30 border-cyan-500/60'
+                    : stageStatus === 'in_progress'
+                    ? 'bg-amber-950/30 border-amber-500/60 animate-pulse'
+                    : 'bg-slate-900/50 border-slate-800 opacity-60'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
+                      stageStatus === 'completed'
+                        ? 'bg-cyan-500 text-black'
+                        : stageStatus === 'in_progress'
+                        ? 'bg-amber-500 text-black'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      {s.stage}
+                    </span>
+                    <h3 className="font-bold text-xs text-white">Stage {s.stage}</h3>
+                  </div>
+
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded uppercase ${
+                    stageStatus === 'completed'
+                      ? 'bg-cyan-500/20 text-cyan-300'
+                      : stageStatus === 'in_progress'
+                      ? 'bg-amber-500/20 text-amber-300'
+                      : 'bg-slate-800 text-slate-500'
+                  }`}>
+                    {stageStatus === 'completed' ? 'Detected' : stageStatus === 'in_progress' ? 'Occurring' : 'Pending'}
+                  </span>
+                </div>
+
+                <div className="text-xs font-semibold text-slate-200 mt-1">{s.name}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{s.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Live Generated Telemetry Feed */}
+      <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-            Live Generated Telemetry Logs
-          </h3>
-          <span className="text-[11px] text-slate-400">
-            {events.length} events emitted
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              Live Reconstructed Telemetry Feed
+            </h3>
+          </div>
+          <span className="text-xs text-slate-400 font-mono">
+            {events.length} events logged
           </span>
         </div>
 
-        <div className="space-y-1.5 max-h-56 overflow-y-auto">
+        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
           {events.length === 0 ? (
-            <div className="text-slate-500 text-xs py-4 text-center">
-              No logs generated yet. Click "Start Simulation" to stream events.
+            <div className="text-slate-500 text-xs py-8 text-center bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+              No events generated yet. Click "START SAFE ATTACK SIMULATION" above to stream telemetry.
             </div>
           ) : (
-            events.slice(-6).reverse().map((e) => (
+            events.slice(-8).reverse().map((e) => (
               <div
                 key={e.id}
                 onClick={() => onInspectEvidence && onInspectEvidence(e)}
-                className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-2 hover:bg-slate-800/60 cursor-pointer text-xs"
+                className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-cyan-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer text-xs transition-colors"
               >
-                <div className="flex items-center gap-2 truncate">
+                <div className="flex items-start sm:items-center gap-2.5 min-w-0">
                   <span
-                    className={
+                    className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase flex-shrink-0 ${
                       e.severity === 'critical'
-                        ? 'text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-red-950 text-red-400 flex-shrink-0'
-                        : 'text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-slate-800 text-slate-300 flex-shrink-0'
-                    }
+                        ? 'bg-red-950 text-red-400 border border-red-500/40'
+                        : e.severity === 'high'
+                        ? 'bg-amber-950 text-amber-400 border border-amber-500/40'
+                        : 'bg-slate-800 text-slate-300'
+                    }`}
                   >
                     {e.severity}
                   </span>
-                  <span className="text-slate-200 truncate">{e.event_description}</span>
+                  <div className="min-w-0">
+                    <p className="text-slate-200 font-medium truncate">{e.event_description}</p>
+                    <p className="text-[10px] text-slate-500 font-mono">
+                      {e.mitre_id} ({e.mitre_name}) • {e.username || 'System'}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono whitespace-nowrap flex-shrink-0">
-                  {e.device_name}
+
+                <div className="text-right flex sm:flex-col items-center sm:items-end justify-between text-[10px] text-slate-400 font-mono flex-shrink-0">
+                  <span className="text-cyan-400">{e.device_name}</span>
+                  <span className="text-slate-500">{new Date(e.timestamp).toLocaleTimeString()}</span>
                 </div>
               </div>
             ))
