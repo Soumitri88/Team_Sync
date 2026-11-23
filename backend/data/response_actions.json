@@ -1,46 +1,35 @@
 [
   {
-    "id": "ACT-20261123075601-877",
+    "id": "ACT-20261123120540-322",
+    "action_type": "isolate_device",
+    "target": "WS-ENGINEERING-07",
+    "status": "EXECUTED_SIMULATED",
+    "timestamp": "2026-11-23T12:05:40.156951",
+    "operator": "SOC-Commander",
+    "title": "Endpoint Network Containment",
+    "details": "Simulated 802.1X VLAN isolation applied to endpoint 'WS-ENGINEERING-07'. Blocked all ingress/egress traffic except SOC telemetry port 8443.",
+    "mitigation_impact": "Halts lateral propagation and prevents attacker C2 egress."
+  },
+  {
+    "id": "ACT-20261123120548-678",
+    "action_type": "isolate_device",
+    "target": "DEV-STORAGE-03",
+    "status": "EXECUTED_SIMULATED",
+    "timestamp": "2026-11-23T12:05:48.719959",
+    "operator": "SOC-Commander",
+    "title": "Endpoint Network Containment",
+    "details": "Simulated 802.1X VLAN isolation applied to endpoint 'DEV-STORAGE-03'. Blocked all ingress/egress traffic except SOC telemetry port 8443.",
+    "mitigation_impact": "Halts lateral propagation and prevents attacker C2 egress."
+  },
+  {
+    "id": "ACT-20261123120551-272",
     "action_type": "revoke_session",
     "target": "david.webb",
     "status": "EXECUTED_SIMULATED",
-    "timestamp": "2026-11-23T07:56:01.035037",
-    "operator": "Autonomous-Incident-Response",
+    "timestamp": "2026-11-23T12:05:51.378011",
+    "operator": "Alex Vance",
     "title": "Custom SOC Playbook Countermeasure",
     "details": "Executed custom mitigation action against 'david.webb'.",
     "mitigation_impact": "Reduces environmental risk exposure."
-  },
-  {
-    "id": "ACT-20261123075601-877",
-    "action_type": "enable_mfa",
-    "target": "david.webb",
-    "status": "EXECUTED_SIMULATED",
-    "timestamp": "2026-11-23T07:56:01.035037",
-    "operator": "Autonomous-Incident-Response",
-    "title": "Custom SOC Playbook Countermeasure",
-    "details": "Executed custom mitigation action against 'david.webb'.",
-    "mitigation_impact": "Reduces environmental risk exposure."
-  },
-  {
-    "id": "ACT-20261123075601-694",
-    "action_type": "quarantine_host",
-    "target": "WS-ENGINEERING-07",
-    "status": "EXECUTED_SIMULATED",
-    "timestamp": "2026-11-23T07:56:01.035037",
-    "operator": "Autonomous-Incident-Response",
-    "title": "Custom SOC Playbook Countermeasure",
-    "details": "Executed custom mitigation action against 'WS-ENGINEERING-07'.",
-    "mitigation_impact": "Reduces environmental risk exposure."
-  },
-  {
-    "id": "ACT-20261123075601-185",
-    "action_type": "block_ip",
-    "target": "198.51.100.44",
-    "status": "EXECUTED_SIMULATED",
-    "timestamp": "2026-11-23T07:56:01.035037",
-    "operator": "Autonomous-Incident-Response",
-    "title": "Perimeter Firewall Ingress Drop",
-    "details": "Simulated boundary ACL rule deployed to Edge Gateway: DROP ip source '198.51.100.44' on all external interfaces.",
-    "mitigation_impact": "Prevents remote adversary from initiating new ingress TCP handshakes."
   }
 ]

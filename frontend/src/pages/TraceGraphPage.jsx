@@ -8,10 +8,10 @@ import {
   MarkerType
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { 
-  Network, 
-  Flame, 
-  RefreshCw 
+import {
+  Network,
+  Flame,
+  RefreshCw
 } from 'lucide-react';
 import { CustomGraphNode } from '../components/CustomGraphNode';
 import { useSecurity } from '../context/SecurityContext';
@@ -113,11 +113,10 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setHighlightCriticalOnly((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all ${
-              highlightCriticalOnly
-                ? 'bg-red-950 text-red-300 border-red-500'
-                : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all ${highlightCriticalOnly
+              ? 'bg-red-950 text-red-300 border-red-500'
+              : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+              }`}
           >
             <Flame className="w-3.5 h-3.5 text-red-400" />
             <span className="hidden sm:inline">{highlightCriticalOnly ? 'Show All Paths' : 'Highlight Attack Path'}</span>

@@ -1,53 +1,29 @@
 [
   {
     "id": "INC-20261123-01",
-    "title": "Active Cyber Intrusion Campaign - SRV-FINANCE-01",
+    "title": "Active Cyber Intrusion Campaign - WS-ENGINEERING-07",
     "severity": "critical",
     "status": "contained",
-    "created_at": "2026-11-23T07:51:09.918086",
-    "updated_at": "2026-11-23T07:56:00.953175",
-    "patient_zero": "SRV-FINANCE-01",
-    "affected_devices": [
-      "SRV-FINANCE-01",
-      "GW-VPN-EDGE-01",
-      "WS-ENGINEERING-07"
-    ],
-    "affected_accounts": [
-      "SYSTEM",
-      "david.webb"
-    ],
-    "events_count": 8,
-    "blast_radius_score": 100.0,
-    "mitre_tactics": [
-      "T1048",
-      "T1110",
-      "T1078",
-      "T1068",
-      "T1021",
-      "T1005"
-    ],
-    "summary": "Threat actively contained by automated SOC countermeasures. Systems quarantined.",
-    "contained_at": "2026-11-23T07:56:01.035037"
-  },
-  {
-    "id": "INC-20261123-01",
-    "title": "Active Cyber Intrusion Campaign - WS-ENGINEERING-07",
-    "severity": "low",
-    "status": "active",
-    "created_at": "2026-11-23T07:56:01.035037",
-    "updated_at": "2026-11-23T07:56:01.035037",
+    "created_at": "2026-11-23T12:05:07.916839",
+    "updated_at": "2026-11-23T12:05:07.932928",
     "patient_zero": "WS-ENGINEERING-07",
     "affected_devices": [
+      "SRV-FINANCE-01",
       "WS-ENGINEERING-07"
     ],
     "affected_accounts": [
-      "SOC-Commander"
+      "david.webb",
+      "SYSTEM"
     ],
-    "events_count": 1,
-    "blast_radius_score": 15.0,
+    "events_count": 6,
+    "blast_radius_score": 69.0,
     "mitre_tactics": [
-      "RESPONSE-CONTAIN"
+      "T1068",
+      "T1005",
+      "T1021",
+      "T1048",
+      "T1078"
     ],
-    "summary": "Initial suspicious activity observed originating from 127.0.0.1 targeting WS-ENGINEERING-07."
+    "summary": "Threat actively contained by automated SOC countermeasures. Systems quarantined."
   }
 ]
