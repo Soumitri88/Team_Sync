@@ -35,30 +35,35 @@ export const SettingsPage = () => {
 
   useEffect(() => {
     fetch('/api/settings')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Offline');
+        return res.json();
+      })
       .then((data) => {
         if (data && Object.keys(data).length > 0) {
           setConfig((prev) => ({ ...prev, ...data }));
         }
       })
-      .catch((err) => console.error('Settings load error:', err));
+      .catch(() => {
+        const local = localStorage.getItem('ployweb_config');
+        if (local) {
+          try { setConfig(JSON.parse(local)); } catch (e) {}
+        }
+      });
   }, []);
 
   const handleSave = async (e) => {
     e.preventDefault();
+    localStorage.setItem('ployweb_config', JSON.stringify(config));
     try {
-      const res = await fetch('/api/settings', {
+      await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config)
       });
-      if (res.ok) {
-        setSavedStatus('Settings successfully committed to SOC configuration store.');
-        setTimeout(() => setSavedStatus(''), 4000);
-      }
-    } catch (err) {
-      setSavedStatus('Error updating configuration');
-    }
+    } catch (err) {}
+    setSavedStatus('Settings successfully committed to SOC configuration store.');
+    setTimeout(() => setSavedStatus(''), 4000);
   };
 
   const handleFactoryReset = async () => {

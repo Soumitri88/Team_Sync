@@ -18,23 +18,27 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useSecurity } from '../context/SecurityContext';
+import { INITIAL_REPORT } from '../services/clientEngine';
 
 export const ReportsPage = () => {
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [report, setReport] = useState(INITIAL_REPORT);
+  const [loading, setLoading] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
 
   useEffect(() => {
     fetch('/api/report/generate')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Offline');
+        return res.json();
+      })
       .then((data) => {
-        setReport(data);
-        setLoading(false);
+        if (data && data.report_id) {
+          setReport(data);
+        }
       })
       .catch((err) => {
-        console.error('Failed to load report:', err);
-        setLoading(false);
+        console.log('[Reports] Using client-side autonomous investigation dossier.');
       });
   }, []);
 

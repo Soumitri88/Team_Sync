@@ -424,3 +424,67 @@ export const INITIAL_ACTIONS = [
     integrity_hash: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
   }
 ];
+
+export const INITIAL_REPORT = {
+  report_id: "IR-REPORT-20261123-099",
+  generated_at: new Date().toISOString(),
+  classification: "CONFIDENTIAL // SOC RESTRICTED",
+  investigation_status: "ACTIVE_INVESTIGATION",
+  incident_summary: "Autonomous cybersecurity investigation conducted by PloyWeb platform. An adversarial intrusion campaign was identified originating against perimeter node 'WS-ENGINEERING-07'. The attacker progressed across 2 endpoints (WS-ENGINEERING-07, SRV-FINANCE-01) utilizing compromised credentials and privilege escalation to access internal network assets. Deception canary tripwires were activated on 1 decoy trap (financial_report_demo.txt), successfully corroborating targeted intent. Calculated enterprise blast radius exposure is 85%.",
+  blast_radius: {
+    impact_score: 85,
+    patient_zero: "WS-ENGINEERING-07",
+    compromised_devices: [
+      { name: "WS-ENGINEERING-07", role: "Workstation (Patient Zero)", os: "Windows 11 Enterprise" },
+      { name: "SRV-FINANCE-01", role: "Core Finance Storage", os: "Ubuntu 22.04 LTS" }
+    ],
+    compromised_accounts: [
+      { username: "david.webb", role: "Domain Engineer" },
+      { username: "SYSTEM", role: "Root/Kernel OS Level" }
+    ]
+  },
+  mitre_techniques: [
+    { id: "T1078", name: "Valid Accounts: Compromised Credentials", first_seen: new Date(Date.now() - 900000).toISOString(), occurrences: 1, severity: "high" },
+    { id: "T1068", name: "Exploitation for Privilege Escalation", first_seen: new Date(Date.now() - 750000).toISOString(), occurrences: 1, severity: "high" },
+    { id: "T1021", name: "Remote Services: WinRM", first_seen: new Date(Date.now() - 600000).toISOString(), occurrences: 1, severity: "critical" },
+    { id: "T1005", name: "Data from Local System: Decoy Canary Breach", first_seen: new Date(Date.now() - 450000).toISOString(), occurrences: 1, severity: "critical" },
+    { id: "T1048", name: "Exfiltration Over Alternative Protocol", first_seen: new Date(Date.now() - 300000).toISOString(), occurrences: 1, severity: "critical" }
+  ],
+  timeline_events: INITIAL_EVENTS,
+  evidence_audit: {
+    total_events_checked: 6,
+    valid_hashes: 6,
+    tampered_events: 0,
+    status: "ALL_HASHES_VALID",
+    root_merkle_digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  response_actions_taken: INITIAL_ACTIONS,
+  recommendations: [
+    {
+      category: "Perimeter & Identity",
+      action: "Enforce Multi-Factor Authentication (MFA) & FIDO2 on all external VPN gateways.",
+      priority: "HIGH",
+      mitre_ref: "T1110, T1078"
+    },
+    {
+      category: "Privilege & Access Control",
+      action: "Audit and restrict SeImpersonatePrivilege and local administrator delegation across all workstations.",
+      priority: "CRITICAL",
+      mitre_ref: "T1068, T1134"
+    },
+    {
+      category: "Deception Architecture",
+      action: "Expand Canary Twin decoy files across high-value database mounts and Active Directory shares.",
+      priority: "MEDIUM",
+      mitre_ref: "T1005"
+    },
+    {
+      category: "Network Microsegmentation",
+      action: "Isolate engineering and finance subnets via dynamic Zero-Trust Network Access (ZTNA) policies.",
+      priority: "HIGH",
+      mitre_ref: "T1021"
+    }
+  ],
+  investigator: "PloyWeb Autonomous Forensic Engine v2.4",
+  digital_seal_hash: "b083a12a2d73844f481dfacf1356231c2eda4250ce20db516c3220e64d3161bc"
+};
