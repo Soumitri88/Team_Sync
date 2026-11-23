@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { 
-  ReactFlow, 
-  Background, 
-  Controls, 
-  useNodesState, 
+import React, { useMemo, useCallback } from 'react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  useNodesState,
   useEdgesState,
   MarkerType
 } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { 
   Network, 
   Flame, 
@@ -16,26 +17,27 @@ import { CustomGraphNode } from '../components/CustomGraphNode';
 import { useSecurity } from '../context/SecurityContext';
 
 const nodeTypes = {
-  customNode: CustomGraphNode
+  custom: CustomGraphNode
 };
 
 export const TraceGraphPage = ({ onInspectEvidence }) => {
   const { attackGraph, refreshAll } = useSecurity();
-  const [highlightCriticalOnly, setHighlightCriticalOnly] = useState(false);
+  const [highlightCriticalOnly, setHighlightCriticalOnly] = React.useState(false);
 
   const rawNodes = attackGraph?.nodes || [];
   const rawEdges = attackGraph?.edges || [];
 
   const filteredNodes = useMemo(() => {
     return rawNodes.map((n) => {
-      const isCrit = n.data?.is_critical_path;
-      const isDimmed = highlightCriticalOnly && !isCrit;
+      const isCritical = n.data?.critical_path;
+      const isDimmed = highlightCriticalOnly && !isCritical;
 
       return {
         ...n,
+        type: 'custom',
         style: {
-          opacity: isDimmed ? 0.25 : 1.0,
-          transition: 'opacity 0.3s ease'
+          opacity: isDimmed ? 0.35 : 1,
+          transition: 'all 0.3s ease'
         }
       };
     });
@@ -48,15 +50,15 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
 
       return {
         ...e,
+        animated: isCrit,
         style: {
-          ...e.style,
-          opacity: isDimmed ? 0.15 : 1.0
+          stroke: isCrit ? '#ef4444' : '#38bdf8',
+          strokeWidth: isCrit ? 2.5 : 1.5,
+          opacity: isDimmed ? 0.2 : 0.85
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          width: 14,
-          height: 14,
-          color: e.style?.stroke || '#00f2fe'
+          color: isCrit ? '#ef4444' : '#38bdf8'
         }
       };
     });
@@ -90,17 +92,17 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
   }, [onInspectEvidence]);
 
   return (
-    <div className="space-y-4 pb-8 flex flex-col h-[calc(100vh-7rem)] max-w-7xl mx-auto">
+    <div className="space-y-3 sm:space-y-4 pb-12 flex flex-col h-[520px] sm:h-[calc(100vh-7rem)] max-w-7xl mx-auto">
       {/* Clean Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-shrink-0">
         <div>
           <div className="flex items-center gap-2">
             <Network className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-base font-bold text-white">
+            <h2 className="text-sm sm:text-base font-bold text-white">
               Attack Path Reconstruction
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
             Visual reconstruction of how the attacker entered and moved laterally across systems
           </p>
         </div>
@@ -116,7 +118,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
             }`}
           >
             <Flame className="w-3.5 h-3.5 text-red-400" />
-            <span>{highlightCriticalOnly ? 'Show All Paths' : 'Highlight Attack Path'}</span>
+            <span>{highlightCriticalOnly ? 'Show All' : 'Highlight Path'}</span>
           </button>
 
           <button
@@ -129,20 +131,20 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
         </div>
       </div>
 
-      {/* Clean Legend Bar */}
-      <div className="cyber-card px-4 py-2 rounded-xl flex items-center justify-between text-xs text-slate-300 flex-shrink-0">
-        <div className="flex items-center gap-4 flex-wrap">
+      {/* Legend Bar */}
+      <div className="cyber-card px-3 sm:px-4 py-2 rounded-xl flex items-center justify-between text-[11px] sm:text-xs text-slate-300 flex-shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-4 flex-wrap">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-            <span>Adversary Origin</span>
+            <span>Origin</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-            <span>Computers & Servers</span>
+            <span>Computers</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-            <span>Compromised User</span>
+            <span>User</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
@@ -150,13 +152,13 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
           </div>
         </div>
 
-        <span className="text-[11px] text-cyan-400 hidden md:block">
+        <span className="text-[11px] text-cyan-400 hidden lg:block">
           💡 Click any node or arrow to see details and take action
         </span>
       </div>
 
       {/* Interactive Flow Canvas */}
-      <div className="relative flex-1 w-full rounded-2xl border border-slate-800 overflow-hidden bg-[#070b14] shadow-inner">
+      <div className="relative flex-1 w-full rounded-2xl border border-slate-800 overflow-hidden bg-[#070b14] shadow-inner min-h-[350px]">
         <ReactFlow
           nodes={nodes}
           edges={edges}

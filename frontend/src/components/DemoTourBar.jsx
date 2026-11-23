@@ -1,11 +1,8 @@
 import React from 'react';
 import { 
-  Sparkles, 
   ArrowRight, 
   ArrowLeft, 
-  X, 
-  CheckCircle2, 
-  RotateCcw
+  X
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 
@@ -17,8 +14,7 @@ export const DemoTourBar = ({ onNavigate }) => {
     currentDemoStep, 
     nextDemoStep, 
     prevDemoStep, 
-    exitDemo,
-    reseedDemo 
+    exitDemo
   } = useSecurity();
 
   if (!demoActive || !currentDemoStep) return null;
@@ -35,25 +31,25 @@ export const DemoTourBar = ({ onNavigate }) => {
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-2xl bg-[#0d1527]/95 backdrop-blur-md border border-cyan-500/40 rounded-xl shadow-2xl p-3.5 text-slate-100 transition-all duration-300">
-      <div className="flex items-center justify-between gap-3">
+    <div className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-2xl bg-[#0d1527]/95 backdrop-blur-md border border-cyan-500/40 rounded-xl shadow-2xl p-2.5 sm:p-3.5 text-slate-100 transition-all duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         {/* Step Info */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
             {demoStep}/9
           </div>
-          <div>
-            <div className="text-xs font-bold text-white flex items-center gap-2">
-              <span>{currentDemoStep.title}</span>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-white truncate">
+              {currentDemoStep.title}
             </div>
-            <p className="text-[11px] text-slate-300 line-clamp-1 max-w-md">
+            <p className="text-[10px] sm:text-[11px] text-slate-300 line-clamp-1">
               {currentDemoStep.description}
             </p>
           </div>
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-1 sm:pt-0 border-t border-slate-800/80 sm:border-0">
           <button
             onClick={prevDemoStep}
             disabled={demoStep === 1}
@@ -67,7 +63,7 @@ export const DemoTourBar = ({ onNavigate }) => {
             onClick={handleAdvance}
             className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
           >
-            <span>{demoStep === 9 ? 'Finish' : 'Next Step'}</span>
+            <span>{demoStep === 9 ? 'Finish' : 'Next'}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
 

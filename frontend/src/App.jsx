@@ -15,21 +15,21 @@ import { EvidenceLedgerPage } from './pages/EvidenceLedgerPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useAuth } from './context/AuthContext';
-import { useSecurity } from './context/SecurityContext';
 
 export function App() {
   const { isAuthenticated } = useAuth();
-  const { demoActive } = useSecurity();
   const [currentPath, setCurrentPath] = useState('/');
   const [inspectedItem, setInspectedItem] = useState(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-  // If not logged in, render cybersecurity terminal login
+  // If not logged in, render authentication page
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={() => setCurrentPath('/')} />;
   }
 
   const handleNavigate = (path) => {
     setCurrentPath(path);
+    setIsMobileNavOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -65,17 +65,26 @@ export function App() {
   };
 
   return (
-    <div className="flex h-screen bg-[#070b14] text-slate-100 overflow-hidden font-sans selection:bg-cyan-500 selection:text-black">
-      {/* Sidebar Navigation */}
-      <Sidebar currentPath={currentPath} onNavigate={handleNavigate} />
+    <div className="flex h-screen w-screen bg-[#070b14] text-slate-100 overflow-hidden font-sans selection:bg-cyan-500 selection:text-black">
+      {/* Sidebar Navigation (Responsive Drawer on Mobile, Static on Desktop) */}
+      <Sidebar
+        currentPath={currentPath}
+        onNavigate={handleNavigate}
+        isOpen={isMobileNavOpen}
+        onClose={() => setIsMobileNavOpen(false)}
+      />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
         {/* Top Navbar */}
-        <Navbar currentPath={currentPath} onNavigate={handleNavigate} />
+        <Navbar
+          currentPath={currentPath}
+          onNavigate={handleNavigate}
+          onToggleSidebar={() => setIsMobileNavOpen((prev) => !prev)}
+        />
 
         {/* Scrollable View Container */}
-        <main className="flex-1 overflow-y-auto px-6 py-6 relative">
+        <main className="flex-1 overflow-y-auto px-3.5 py-4 sm:px-6 sm:py-6 relative min-w-0">
           {renderActivePage()}
         </main>
       </div>

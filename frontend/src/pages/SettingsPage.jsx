@@ -213,7 +213,7 @@ export const SettingsPage = () => {
           <div className="pt-2">
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-bold flex items-center gap-2 shadow-neon-cyan transition-all"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-bold flex items-center justify-center gap-2 shadow-neon-cyan transition-all"
             >
               <Save className="w-4 h-4" />
               <span>Save Configuration</span>
@@ -223,20 +223,20 @@ export const SettingsPage = () => {
       </form>
 
       {/* Dangerous Zone / Factory Reset */}
-      <div className="cyber-card p-5 rounded-2xl border-red-500/40 bg-red-950/10 space-y-3 font-mono text-xs">
+      <div className="cyber-card p-4 sm:p-5 rounded-2xl border-red-500/40 bg-red-950/10 space-y-3 font-mono text-xs">
         <div className="flex items-center gap-2 text-red-400 font-bold border-b border-red-900/40 pb-2">
           <Database className="w-4 h-4" />
           <span>Reset Platform & Reseed Demonstration Telemetry</span>
         </div>
 
-        <p className="text-slate-300 leading-relaxed font-sans">
+        <p className="text-slate-300 leading-relaxed font-sans text-xs">
           Clears all current event logs, incidents, response action records, and resets canary tripwires back to their quiescent armed state. Re-populates the database with the pristine 5-stage multi-stage attack scenario for a clean demonstration.
         </p>
 
         <button
           onClick={handleFactoryReset}
           disabled={resetting}
-          className="px-4 py-2 rounded-xl bg-red-950 hover:bg-red-900 border border-red-500 text-red-300 font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-950 hover:bg-red-900 border border-red-500 text-red-300 font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
         >
           <RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
           <span>{resetting ? 'Reseeding SOC Telemetry...' : 'Factory Reset & Reseed Demo Data'}</span>

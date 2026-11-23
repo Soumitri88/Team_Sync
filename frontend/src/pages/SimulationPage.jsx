@@ -10,53 +10,53 @@ import {
 import { useSecurity } from '../context/SecurityContext';
 
 export const SimulationPage = ({ onInspectEvidence }) => {
-  const {
-    simState,
-    startSimulation,
-    pauseSimulation,
-    resumeSimulation,
-    resetSimulation,
-    stepSimulation,
-    events
+  const { 
+    simState, 
+    startSimulation, 
+    pauseSimulation, 
+    resumeSimulation, 
+    stepSimulation, 
+    resetSimulation, 
+    events 
   } = useSecurity();
 
-  const [selectedScenario, setSelectedScenario] = useState('multi_stage');
+  const [selectedScenario, setSelectedScenario] = useState('full_killchain');
 
   const scenariosList = [
     {
-      id: 'multi_stage',
-      title: 'Full Multi-Stage Attack (Recommended)',
-      desc: 'Complete attack progression: Initial Password Spray → Login → Jump to Internal PC → Admin Privilege Escalation → Decoy Trap Tripped.',
-      badge: 'All-in-One Demo',
-      severity: 'Critical'
+      id: 'full_killchain',
+      title: '1. Multi-Stage Enterprise Intrusion (Kill-Chain)',
+      desc: 'Simulates VPN password spraying, initial access, privilege escalation, lateral pivot to engineering workstations, and decoy canary document breach.',
+      severity: 'Critical',
+      badge: '5 Stages'
     },
     {
-      id: 'brute_force',
-      title: 'Password Guessing (Brute Force)',
-      desc: 'Adversary repeatedly guesses credentials against the VPN gateway until the account is locked.',
-      badge: 'Phase 1',
-      severity: 'Medium'
+      id: 'ransomware_canary',
+      title: '2. Ransomware Staging & Canary Trip',
+      desc: 'Adversary stages batch encryptor scripts in shared file storage and triggers an active tripwire canary trap.',
+      severity: 'Critical',
+      badge: '3 Stages'
     },
     {
-      id: 'suspicious_login_lateral',
-      title: 'Suspicious Login & Pivot',
-      desc: 'Compromised user logs in from an anomalous country and scans the network for internal database servers.',
-      badge: 'Phase 2',
-      severity: 'High'
+      id: 'credential_dump',
+      title: '3. LSASS Memory Injection & Credential Theft',
+      desc: 'Post-compromise memory dump of LSASS subsystem on a secondary workstation and Kerberos ticket extraction.',
+      severity: 'High',
+      badge: '2 Stages'
     },
     {
-      id: 'privilege_escalation',
-      title: 'Privilege Escalation',
-      desc: 'Attacker exploits token impersonation on a workstation to elevate to full SYSTEM administrator rights.',
-      badge: 'Phase 3',
-      severity: 'Critical'
+      id: 'insider_exfil',
+      title: '4. Insider Threat & Sensitive Data Exfiltration',
+      desc: 'Simulated authorized engineer accessing abnormal financial database files and staging external transfer.',
+      severity: 'High',
+      badge: '3 Stages'
     },
     {
-      id: 'suspicious_file_access',
-      title: 'Decoy File Access (Canary)',
-      desc: 'Attacker looks through confidential file shares and opens a fake honey-token file, triggering an instant alarm.',
-      badge: 'Phase 4',
-      severity: 'Critical'
+      id: 'cloud_token_abuse',
+      title: '5. Cloud IAM Metadata Token Abuse',
+      desc: 'Workload identity exploitation retrieving short-lived AWS/GCP session credentials from an exposed microservice.',
+      severity: 'Critical',
+      badge: '3 Stages'
     }
   ];
 
@@ -72,17 +72,17 @@ export const SimulationPage = ({ onInspectEvidence }) => {
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-5xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 pb-16 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-base font-bold text-white">
+            <h2 className="text-sm sm:text-base font-bold text-white">
               Attack Simulator
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
             Select an attack scenario to safely generate live security telemetry for analysis
           </p>
         </div>
@@ -101,17 +101,8 @@ export const SimulationPage = ({ onInspectEvidence }) => {
         </div>
       </div>
 
-      {/* Safety Notice */}
-      <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center gap-3 text-xs text-slate-300">
-        <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-        <span>
-          <strong>100% Safe Virtual Simulation:</strong> All attacks run inside a virtual simulation model. No real files or operating system settings are modified.
-        </span>
-      </div>
-
-      {/* Simulation Controller Box */}
-      <div className="cyber-card p-5 rounded-2xl border border-slate-800 space-y-4">
-        {/* Progress Bar */}
+      {/* Controller Card */}
+      <div className="cyber-card p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-4">
         <div>
           <div className="flex items-center justify-between text-xs text-slate-300 mb-1.5 font-medium">
             <span>Simulation Progress</span>
@@ -119,18 +110,18 @@ export const SimulationPage = ({ onInspectEvidence }) => {
           </div>
           <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
             <div
-              className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full transition-all duration-300"
+              className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-300"
               style={{ width: `${progressPct}%` }}
             />
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap pt-1">
+        {/* Action Controls */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 pt-1 w-full sm:w-auto">
           {!isRunning ? (
             <button
               onClick={isPaused ? resumeSimulation : handleStart}
-              className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center gap-2 transition-all shadow-sm"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
             >
               <Play className="w-3.5 h-3.5 fill-black" />
               <span>{isPaused ? 'Resume Attack' : 'Start Simulation'}</span>
@@ -138,7 +129,7 @@ export const SimulationPage = ({ onInspectEvidence }) => {
           ) : (
             <button
               onClick={pauseSimulation}
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-2 transition-all"
+              className="col-span-2 sm:col-span-1 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all"
             >
               <Pause className="w-3.5 h-3.5 fill-black" />
               <span>Pause Attack</span>
@@ -147,15 +138,15 @@ export const SimulationPage = ({ onInspectEvidence }) => {
 
           <button
             onClick={stepSimulation}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
           >
             <SkipForward className="w-3.5 h-3.5" />
-            <span>Step Next Event</span>
+            <span>Step Next</span>
           </button>
 
           <button
             onClick={resetSimulation}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-red-950/40 text-slate-400 hover:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-red-950/40 text-slate-400 hover:text-red-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset</span>
@@ -165,8 +156,8 @@ export const SimulationPage = ({ onInspectEvidence }) => {
 
       {/* Scenarios Grid */}
       <div>
-        <h3 className="text-sm font-bold text-white mb-3">Choose a Scenario to Simulate</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <h3 className="text-xs sm:text-sm font-bold text-white mb-3">Choose a Scenario to Simulate</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
           {scenariosList.map((sc) => {
             const isSelected = selectedScenario === sc.id;
             return (
@@ -175,13 +166,13 @@ export const SimulationPage = ({ onInspectEvidence }) => {
                 onClick={() => setSelectedScenario(sc.id)}
                 className={
                   isSelected
-                    ? 'p-4 rounded-xl border cursor-pointer transition-all bg-cyan-950/30 border-cyan-500 shadow-sm'
-                    : 'p-4 rounded-xl border cursor-pointer transition-all cyber-card border-slate-800 hover:border-slate-700'
+                    ? 'p-3.5 sm:p-4 rounded-xl border cursor-pointer transition-all bg-cyan-950/30 border-cyan-500 shadow-sm'
+                    : 'p-3.5 sm:p-4 rounded-xl border cursor-pointer transition-all cyber-card border-slate-800 hover:border-slate-700'
                 }
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <div className="text-xs font-bold text-white">{sc.title}</div>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold flex-shrink-0">
                     {sc.badge}
                   </span>
                 </div>
@@ -209,7 +200,7 @@ export const SimulationPage = ({ onInspectEvidence }) => {
       </div>
 
       {/* Generated Logs Preview */}
-      <div className="cyber-card p-5 rounded-2xl border border-slate-800 space-y-3">
+      <div className="cyber-card p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">
             Live Generated Telemetry Logs
@@ -219,33 +210,33 @@ export const SimulationPage = ({ onInspectEvidence }) => {
           </span>
         </div>
 
-        <div className="space-y-1.5 max-h-48 overflow-y-auto font-mono text-xs">
+        <div className="space-y-1.5 max-h-56 overflow-y-auto">
           {events.length === 0 ? (
-            <div className="text-slate-500 italic py-4 text-center">
-              No simulation logs yet. Click "Start Simulation" above.
+            <div className="text-slate-500 text-xs py-4 text-center">
+              No logs generated yet. Click "Start Simulation" to stream events.
             </div>
           ) : (
-            events.slice(0, 8).map((e) => (
+            events.slice(-6).reverse().map((e) => (
               <div
                 key={e.id}
                 onClick={() => onInspectEvidence && onInspectEvidence(e)}
-                className="p-2 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-2 hover:bg-slate-800/60 cursor-pointer"
+                className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-2 hover:bg-slate-800/60 cursor-pointer text-xs"
               >
                 <div className="flex items-center gap-2 truncate">
                   <span
                     className={
                       e.severity === 'critical'
-                        ? 'text-[9px] px-1.5 py-0.2 rounded font-bold uppercase bg-red-950 text-red-400'
-                        : 'text-[9px] px-1.5 py-0.2 rounded font-bold uppercase bg-slate-800 text-slate-300'
+                        ? 'text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-red-950 text-red-400 flex-shrink-0'
+                        : 'text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-slate-800 text-slate-300 flex-shrink-0'
                     }
                   >
                     {e.severity}
                   </span>
                   <span className="text-slate-200 truncate">{e.event_description}</span>
                 </div>
-                <span className="text-slate-500 text-[10px] whitespace-nowrap">
+                <div className="text-[10px] text-slate-500 font-mono whitespace-nowrap flex-shrink-0">
                   {e.device_name}
-                </span>
+                </div>
               </div>
             ))
           )}

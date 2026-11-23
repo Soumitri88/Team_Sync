@@ -32,7 +32,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
+    <div className="min-h-screen bg-[#070b14] flex flex-col items-center justify-center p-3 sm:p-6 relative overflow-hidden select-none">
       {/* Background Cyber Grid Lines & Ambient Glows */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-40 pointer-events-none" />
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -41,26 +41,26 @@ export const LoginPage = ({ onLoginSuccess }) => {
       {/* Main Authentication Card */}
       <div className="relative z-10 w-full max-w-xl bg-[#090e1a]/90 backdrop-blur-xl border border-cyan-500/30 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(0,242,254,0.15)] overflow-hidden">
         {/* Top SOC Banner */}
-        <div className="p-6 bg-gradient-to-b from-[#0d1527] to-[#090e1a] border-b border-[#1b2a47] text-center relative">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 p-0.5 shadow-neon-cyan mb-3">
+        <div className="p-4 sm:p-6 bg-gradient-to-b from-[#0d1527] to-[#090e1a] border-b border-[#1b2a47] text-center relative">
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 p-0.5 shadow-neon-cyan mb-2.5 sm:mb-3">
             <div className="w-full h-full bg-[#070b14] rounded-[14px] flex items-center justify-center">
-              <ShieldAlert className="w-8 h-8 text-cyan-400 animate-pulse" />
+              <ShieldAlert className="w-6 h-6 sm:w-8 sm:h-8 text-cyan-400 animate-pulse" />
             </div>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-wider text-white">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-wider text-white">
             PLOY<span className="text-cyan-400">WEB</span>
           </h1>
-          <p className="text-xs font-mono text-cyan-300 mt-1 uppercase tracking-widest">
+          <p className="text-[10px] sm:text-xs font-mono text-cyan-300 mt-1 uppercase tracking-widest">
             Autonomous Cyber Investigation & Attack Graph Reconstruction
           </p>
-          <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-[11px] font-mono text-cyan-300">
+          <div className="inline-flex items-center gap-2 mt-2.5 sm:mt-3 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-[10px] sm:text-[11px] font-mono text-cyan-300">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             <span>ENTERPRISE SOC ENVIRONMENT READY</span>
           </div>
         </div>
 
         {/* Persona Selector */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
           <div>
             <label className="text-xs font-mono uppercase text-slate-400 tracking-wider block mb-2">
               Select Operator Clearance Profile

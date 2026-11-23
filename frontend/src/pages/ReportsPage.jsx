@@ -183,26 +183,26 @@ export const ReportsPage = () => {
   }
 
   return (
-    <div className="space-y-6 pb-16 max-w-5xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 pb-16 max-w-5xl mx-auto">
       {/* Header and Download Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-base font-bold font-mono text-white">
+            <FileText className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+            <h2 className="text-sm sm:text-base font-bold font-mono text-white">
               Autonomous Cybersecurity Investigation Dossier
             </h2>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5">
             Full attack reconstruction, forensic timeline, blast radius, and hardening plan
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <button
             onClick={handleDownloadPDF}
             disabled={pdfGenerating}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-bold text-xs font-mono flex items-center gap-1.5 shadow-neon-cyan transition-all"
+            className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-bold text-xs font-mono flex items-center justify-center gap-1.5 shadow-neon-cyan transition-all"
           >
             <Download className="w-4 h-4" />
             <span>{pdfGenerating ? 'Generating PDF...' : 'Download PDF Dossier'}</span>
@@ -210,7 +210,7 @@ export const ReportsPage = () => {
 
           <button
             onClick={handleExportJSON}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors"
+            className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-colors"
           >
             <Hash className="w-4 h-4" />
             <span>Export JSON</span>
@@ -218,7 +218,7 @@ export const ReportsPage = () => {
 
           <button
             onClick={handlePrint}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors"
+            className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors"
             title="Print Incident Report"
           >
             <Printer className="w-4 h-4" />
@@ -227,19 +227,19 @@ export const ReportsPage = () => {
       </div>
 
       {/* Main Formatted Incident Dossier View */}
-      <div className="cyber-card p-8 rounded-2xl border-cyan-500/40 space-y-8 bg-[#090e1a]/95 text-slate-200">
+      <div className="cyber-card p-4 sm:p-8 rounded-2xl border-cyan-500/40 space-y-6 sm:space-y-8 bg-[#090e1a]/95 text-slate-200">
         {/* Dossier Header */}
-        <div className="border-b border-[#1b2a47] pb-6 space-y-3 font-mono">
+        <div className="border-b border-[#1b2a47] pb-4 sm:pb-6 space-y-3 font-mono">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
             <div>
               <span className="text-[10px] uppercase tracking-widest text-cyan-400 font-bold block">
                 CYBER INCIDENT RESPONSE DOSSIER
               </span>
-              <h1 className="text-xl font-extrabold text-white tracking-wide">
+              <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-wide">
                 {report.report_id}
               </h1>
             </div>
-            <div className="text-right">
+            <div className="text-left md:text-right">
               <span className="inline-block px-3 py-1 rounded bg-red-950/80 text-red-300 border border-red-500/50 text-xs font-bold uppercase">
                 {report.classification}
               </span>
@@ -331,8 +331,8 @@ export const ReportsPage = () => {
             <span>FORENSIC ATTACK PROGRESSION TIMELINE</span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
+          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <table className="w-full text-left font-mono text-xs min-w-[550px]">
               <thead>
                 <tr className="border-b border-[#1b2a47] text-slate-400 uppercase text-[10px]">
                   <th className="py-2 px-3">Time</th>

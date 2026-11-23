@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "id": "ACT-20261123055704-564",
+    "action_type": "isolate_device",
+    "target": "GW-VPN-EDGE-01",
+    "status": "EXECUTED_SIMULATED",
+    "timestamp": "2026-11-23T05:57:04.161164",
+    "operator": "SOC-Commander",
+    "title": "Endpoint Network Containment",
+    "details": "Simulated 802.1X VLAN isolation applied to endpoint 'GW-VPN-EDGE-01'. Blocked all ingress/egress traffic except SOC telemetry port 8443.",
+    "mitigation_impact": "Halts lateral propagation and prevents attacker C2 egress."
+  },
+  {
+    "id": "ACT-20261123061549-860",
+    "action_type": "investigate_canaries",
+    "target": "Finance_Report_Canary.txt",
+    "status": "EXECUTED_SIMULATED",
+    "timestamp": "2026-11-23T06:15:49.380675",
+    "operator": "Alex Vance",
+    "title": "Canary Deception Forensics Extraction",
+    "details": "Simulated honey-token forensic memory dump collected for decoy 'Finance_Report_Canary.txt'. Extracted process PID and origin IP.",
+    "mitigation_impact": "Confirms attacker objective and validates deceptive telemetry."
+  }
+]
