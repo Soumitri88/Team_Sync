@@ -3,15 +3,10 @@ import {
   ShieldAlert, 
   Activity, 
   Sparkles, 
-  Wifi, 
-  WifiOff, 
   RefreshCw, 
-  Bell, 
-  AlertCircle,
-  ExternalLink,
   ChevronRight,
   ShieldCheck,
-  Flame
+  AlertCircle
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
@@ -35,125 +30,99 @@ export const Navbar = ({ currentPath, onNavigate }) => {
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
-  const getDefconStyle = () => {
-    const status = stats?.overall_status || 'SECURE';
-    if (status === 'CRITICAL_THREAT') {
-      return {
-        badge: 'DEFCON 1 // BREACH IN PROGRESS',
-        color: 'text-red-400 bg-red-950/80 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]',
-        pulse: 'bg-red-500 animate-ping'
-      };
+  const isThreat = stats?.overall_status === 'CRITICAL_THREAT' || stats?.overall_status === 'ELEVATED_RISK';
+
+  const getPageTitle = (path) => {
+    switch (path) {
+      case '/': return 'Dashboard Overview';
+      case '/simulation': return 'Attack Simulator';
+      case '/tracegraph': return 'Attack Path (TraceGraph)';
+      case '/blast-radius': return 'Impact & Blast Radius';
+      case '/incident-response': return 'Incident Response Actions';
+      case '/canary-twin': return 'Decoy Honey-Tokens (Canary)';
+      case '/events': return 'Security Event Logs';
+      case '/evidence': return 'Cryptographic Evidence Ledger';
+      case '/reports': return 'Investigation Dossier';
+      case '/settings': return 'System Settings';
+      default: return 'SOC Console';
     }
-    if (status === 'ELEVATED_RISK') {
-      return {
-        badge: 'DEFCON 2 // HIGH INTRUSION ALERT',
-        color: 'text-amber-400 bg-amber-950/80 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)]',
-        pulse: 'bg-amber-500 animate-ping'
-      };
-    }
-    return {
-      badge: 'DEFCON 5 // SOC NOMINAL',
-      color: 'text-emerald-400 bg-emerald-950/80 border-emerald-500/50',
-      pulse: 'bg-emerald-400'
-    };
   };
 
-  const defcon = getDefconStyle();
-
   return (
-    <header className="sticky top-0 z-20 bg-[#090e1a]/95 backdrop-blur-md border-b border-[#1b2a47] px-6 py-2.5">
+    <header className="sticky top-0 z-20 bg-[#090e1a]/95 backdrop-blur-md border-b border-slate-800 px-6 py-3">
       <div className="flex items-center justify-between gap-4">
-        {/* Left: Path Breadcrumbs & Status */}
+        {/* Left: Clean Path & Status */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <span className="text-cyan-400 font-semibold tracking-wide">SOC-CONSOLE</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-            <span className="text-slate-200 capitalize font-medium">
-              {currentPath.replace('/', '') || 'Security Dashboard'}
-            </span>
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <span className="font-semibold text-slate-200">{getPageTitle(currentPath)}</span>
           </div>
 
-          <div className="h-4 w-px bg-slate-800" />
+          <div className="h-4 w-px bg-slate-800 hidden sm:block" />
 
-          {/* DEFCON indicator */}
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-bold border transition-all ${defcon.color}`}>
-            <span className="relative flex h-2 w-2">
-              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${defcon.pulse}`}></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
-            </span>
-            <span>{defcon.badge}</span>
+          {/* Simple Threat Badge */}
+          <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+            isThreat 
+              ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isThreat ? 'bg-red-400 animate-pulse' : 'bg-emerald-400'}`} />
+            <span>{isThreat ? 'Active Intrusion' : 'Environment Secure'}</span>
           </div>
         </div>
 
-        {/* Right: SOC Controls, UTC Clock, Telemetry status */}
+        {/* Right: Refresh & Actions */}
         <div className="flex items-center gap-3">
-          {/* Telemetry Stream Badge */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#0d1527] border border-[#1b2a47] text-[11px] font-mono text-slate-300">
-            <Wifi className="w-3 h-3 text-cyan-400 animate-pulse" />
-            <span className="text-slate-400">Telemetry:</span>
-            <span className="text-cyan-300 font-semibold">STREAMING</span>
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-400 font-mono">
+            <span>{time} UTC</span>
           </div>
 
-          {/* UTC Clock */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#0d1527] border border-[#1b2a47] text-[11px] font-mono text-slate-300">
-            <Activity className="w-3 h-3 text-purple-400" />
-            <span className="text-purple-300 font-bold">{time} UTC</span>
-          </div>
-
-          {/* Quick Refresh */}
+          {/* Refresh Button */}
           <button
             onClick={handleRefresh}
-            title="Refresh Security Telemetry"
-            className="p-1.5 rounded-lg bg-[#0d1527] border border-[#1b2a47] text-slate-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-colors"
+            title="Refresh Telemetry"
+            className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
 
-          {/* Demo Mode Button (if not already in demo) */}
+          {/* Run Demo Button */}
           {!demoActive && (
             <button
               onClick={startDemo}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-cyan-900/60 to-purple-900/60 hover:from-cyan-800/80 hover:to-purple-800/80 text-cyan-200 border border-cyan-500/40 text-xs font-semibold tracking-wide transition-all shadow-sm"
+              className="px-3 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
             >
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Demo Mode</span>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Run Guided Demo</span>
             </button>
           )}
 
-          {/* Operator Profile Tag */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-            <div className="w-7 h-7 rounded bg-purple-950 border border-purple-500/50 flex items-center justify-center text-xs font-bold font-mono text-purple-300">
-              {user?.avatar || 'OP'}
-            </div>
-            <div className="hidden lg:block text-left">
-              <div className="text-xs font-semibold text-slate-200 leading-none">{user?.name || 'Operator'}</div>
-              <div className="text-[9px] font-mono text-slate-400 mt-0.5 leading-none">{user?.badge || 'CLEARANCE-L1'}</div>
-            </div>
+          {/* Operator Name */}
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-800 text-xs">
+            <span className="text-slate-300 font-medium">{user?.name || 'Operator'}</span>
           </div>
         </div>
       </div>
 
-      {/* Floating Active Critical Alert Notification if present */}
+      {/* Clean Notification Banner for Critical Alerts */}
       {activeAlert && (
-        <div className="mt-2 p-2.5 rounded-lg bg-red-950/90 border border-red-500/80 text-red-200 text-xs font-mono flex items-center justify-between animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-          <div className="flex items-center gap-2.5">
+        <div className="mt-2.5 p-2.5 rounded-lg bg-red-950/80 border border-red-500/40 text-red-200 text-xs flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-            <div>
-              <span className="font-bold uppercase text-red-300">{activeAlert.title}</span>
-              <span className="mx-2 text-red-500">•</span>
-              <span className="text-slate-200">{activeAlert.description}</span>
-            </div>
+            <span><strong>{activeAlert.title}:</strong> {activeAlert.description}</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => onNavigate('/tracegraph')}
-              className="px-2 py-0.5 rounded bg-red-900/80 hover:bg-red-800 text-white text-[11px] font-semibold border border-red-400/50 flex items-center gap-1"
+              onClick={() => {
+                onNavigate('/tracegraph');
+                setActiveAlert(null);
+              }}
+              className="underline text-cyan-300 hover:text-cyan-200 font-semibold text-[11px]"
             >
-              Inspect in TraceGraph →
+              View on Attack Path →
             </button>
             <button
               onClick={() => setActiveAlert(null)}
-              className="text-red-400 hover:text-white text-xs px-1"
+              className="text-slate-400 hover:text-white px-1"
             >
               ✕
             </button>

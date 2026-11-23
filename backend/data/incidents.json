@@ -1,35 +1,33 @@
 [
   {
-    "id": "INC-20261121-01",
+    "id": "INC-20261123-01",
     "title": "Active Cyber Intrusion Campaign - GW-VPN-EDGE-01",
     "severity": "critical",
     "status": "active",
-    "created_at": "2026-11-21T07:47:40.542283",
-    "updated_at": "2026-11-21T07:50:42.386170",
+    "created_at": "2026-11-23T05:48:29.709626",
+    "updated_at": "2026-11-23T05:48:29.774499",
     "patient_zero": "GW-VPN-EDGE-01",
     "affected_devices": [
       "SRV-FINANCE-01",
       "DC-CORP-01",
+      "WS-MARKETING-02",
       "WS-ENGINEERING-07",
-      "DEV-STORAGE-03",
-      "GW-VPN-EDGE-01",
-      "WS-MARKETING-02"
+      "GW-VPN-EDGE-01"
     ],
     "affected_accounts": [
-      "SYSTEM",
-      "adversary.infiltrator",
-      "david.webb"
+      "david.webb",
+      "SYSTEM"
     ],
-    "events_count": 11,
+    "events_count": 8,
     "blast_radius_score": 100.0,
     "mitre_tactics": [
-      "T1021",
-      "T1048",
-      "T1005",
       "T1078",
+      "T1021",
+      "T1005",
+      "T1048",
       "T1068",
       "T1110"
     ],
-    "summary": "Attack chain in progress. 6 devices and 3 accounts impacted across 6 MITRE ATT&CK techniques."
+    "summary": "Attack chain in progress. 5 devices and 2 accounts impacted across 6 MITRE ATT&CK techniques."
   }
 ]
