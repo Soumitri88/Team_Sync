@@ -10,7 +10,7 @@ PloyWeb transforms scattered, noisy security telemetry into a chronological, evi
 
 ## 🌐 Live Access URLs (Single Responsive Application)
 
-- **Public Cloudflare HTTPS URL (Phone, Laptop, Tablet)**: `https://brought-scheduled-mixing-whale.trycloudflare.com`
+- **Public Cloudflare HTTPS URL (Phone, Laptop, Tablet)**: `https://indicated-broad-home-trinity.trycloudflare.com`
 - **Local Host URL (PC)**: `http://localhost:5173`
 - **Local Network URL**: `http://192.168.22.199:5173`
 - **Backend API Docs**: `http://localhost:8000/docs`
