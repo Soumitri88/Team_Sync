@@ -2,22 +2,16 @@ import React from 'react';
 import { 
   ShieldAlert, 
   ShieldCheck, 
-  Server, 
-  Flame, 
-  UserX, 
-  Bug, 
-  ArrowRight, 
   Clock, 
   Network, 
   RotateCcw,
   Sparkles,
-  Lock,
   ChevronRight
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 
 export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
-  const { stats, events, startDemo, demoActive, startSimulation, resetSimulation } = useSecurity();
+  const { stats, events, startDemo, demoActive, resetSimulation } = useSecurity();
 
   const isThreat = stats?.overall_status === 'CRITICAL_THREAT' || stats?.overall_status === 'ELEVATED_RISK';
   const totalEvents = stats?.total_events || 0;

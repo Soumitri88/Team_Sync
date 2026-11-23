@@ -5,20 +5,17 @@ import {
   Pause, 
   RotateCcw, 
   SkipForward, 
-  ShieldCheck, 
-  CheckCircle2, 
-  Sparkles,
-  Layers
+  ShieldCheck 
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 
-export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
-  const { 
-    simState, 
-    startSimulation, 
-    pauseSimulation, 
-    resumeSimulation, 
-    resetSimulation, 
+export const SimulationPage = ({ onInspectEvidence }) => {
+  const {
+    simState,
+    startSimulation,
+    pauseSimulation,
+    resumeSimulation,
+    resetSimulation,
     stepSimulation,
     events
   } = useSecurity();
@@ -63,9 +60,12 @@ export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
     }
   ];
 
-  const isRunning = simState?.status === 'running';
-  const isPaused = simState?.status === 'paused';
-  const progressPct = simState?.progress_pct || 0;
+  const statusText = simState && simState.status ? String(simState.status).toUpperCase() : 'IDLE';
+  const isRunning = simState && simState.status === 'running';
+  const isPaused = simState && simState.status === 'paused';
+  const progressPct = simState && typeof simState.progress_pct === 'number' ? simState.progress_pct : 0;
+  const currentStep = simState && typeof simState.current_step === 'number' ? simState.current_step : 0;
+  const totalSteps = simState && typeof simState.total_steps === 'number' ? simState.total_steps : 0;
 
   const handleStart = () => {
     startSimulation(selectedScenario, 1.0);
@@ -89,12 +89,14 @@ export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
 
         <div className="flex items-center gap-2 text-xs">
           <span className="text-slate-400">Status:</span>
-          <span className={`px-2.5 py-0.5 rounded-full font-semibold uppercase ${
-            isRunning 
-              ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse' 
-              : 'bg-slate-800 text-slate-300'
-          }`}>
-            {simState?.status || 'IDLE'}
+          <span
+            className={
+              isRunning
+                ? 'px-2.5 py-0.5 rounded-full font-semibold uppercase bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse'
+                : 'px-2.5 py-0.5 rounded-full font-semibold uppercase bg-slate-800 text-slate-300'
+            }
+          >
+            {statusText}
           </span>
         </div>
       </div>
@@ -113,7 +115,7 @@ export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
         <div>
           <div className="flex items-center justify-between text-xs text-slate-300 mb-1.5 font-medium">
             <span>Simulation Progress</span>
-            <span>Step {simState?.current_step || 0} / {simState?.total_steps || 0} ({progressPct}%)</span>
+            <span>Step {currentStep} / {totalSteps} ({progressPct}%)</span>
           </div>
           <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
             <div
@@ -171,11 +173,11 @@ export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
               <div
                 key={sc.id}
                 onClick={() => setSelectedScenario(sc.id)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                className={
                   isSelected
-                    ? 'bg-cyan-950/30 border-cyan-500 shadow-sm'
-                    : 'cyber-card border-slate-800 hover:border-slate-700'
-                }`}
+                    ? 'p-4 rounded-xl border cursor-pointer transition-all bg-cyan-950/30 border-cyan-500 shadow-sm'
+                    : 'p-4 rounded-xl border cursor-pointer transition-all cyber-card border-slate-800 hover:border-slate-700'
+                }
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <div className="text-xs font-bold text-white">{sc.title}</div>
@@ -187,12 +189,16 @@ export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
                   {sc.desc}
                 </p>
                 <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                  <span className={`text-[10px] font-bold uppercase ${
-                    sc.severity === 'Critical' ? 'text-red-400' : 'text-amber-400'
-                  }`}>
+                  <span
+                    className={
+                      sc.severity === 'Critical'
+                        ? 'text-[10px] font-bold uppercase text-red-400'
+                        : 'text-[10px] font-bold uppercase text-amber-400'
+                    }
+                  >
                     {sc.severity} Severity
                   </span>
-                  <span className={`font-semibold text-xs ${isSelected ? 'text-cyan-400' : 'text-slate-500'}`}>
+                  <span className={isSelected ? 'font-semibold text-xs text-cyan-400' : 'font-semibold text-xs text-slate-500'}>
                     {isSelected ? '✓ Selected' : 'Select'}
                   </span>
                 </div>
@@ -226,9 +232,13 @@ export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
                 className="p-2 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-2 hover:bg-slate-800/60 cursor-pointer"
               >
                 <div className="flex items-center gap-2 truncate">
-                  <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
-                    e.severity === 'critical' ? 'bg-red-950 text-red-400' : 'bg-slate-800 text-slate-300'
-                  }`}>
+                  <span
+                    className={
+                      e.severity === 'critical'
+                        ? 'text-[9px] px-1.5 py-0.2 rounded font-bold uppercase bg-red-950 text-red-400'
+                        : 'text-[9px] px-1.5 py-0.2 rounded font-bold uppercase bg-slate-800 text-slate-300'
+                    }
+                  >
                     {e.severity}
                   </span>
                   <span className="text-slate-200 truncate">{e.event_description}</span>

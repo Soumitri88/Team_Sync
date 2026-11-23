@@ -10,13 +10,7 @@ import {
 import { 
   Network, 
   Flame, 
-  RefreshCw, 
-  Info,
-  Server,
-  User,
-  Bug,
-  Skull,
-  RotateCcw
+  RefreshCw 
 } from 'lucide-react';
 import { CustomGraphNode } from '../components/CustomGraphNode';
 import { useSecurity } from '../context/SecurityContext';
@@ -31,7 +25,6 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
 
   const rawNodes = attackGraph?.nodes || [];
   const rawEdges = attackGraph?.edges || [];
-  const summary = attackGraph?.summary || { total_nodes: 0, total_edges: 0, critical_path: [] };
 
   const filteredNodes = useMemo(() => {
     return rawNodes.map((n) => {
@@ -50,7 +43,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
 
   const filteredEdges = useMemo(() => {
     return rawEdges.map((e) => {
-      const isCrit = summary.critical_path?.includes(e.source) && summary.critical_path?.includes(e.target);
+      const isCrit = e.data?.severity === 'critical';
       const isDimmed = highlightCriticalOnly && !isCrit;
 
       return {
@@ -67,7 +60,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
         }
       };
     });
-  }, [rawEdges, highlightCriticalOnly, summary.critical_path]);
+  }, [rawEdges, highlightCriticalOnly]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(filteredNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(filteredEdges);
