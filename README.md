@@ -17,6 +17,18 @@ PloyWeb transforms scattered, noisy security telemetry into a chronological, evi
 
 ---
 
+## 🚀 1-Click Permanent Cloud Deployment (24/7 Forever Free)
+
+To deploy a permanent URL that stays online 24/7 independently of your local computer:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Soumitri88/Team_Sync)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Soumitri88/Team_Sync)
+
+1. **Render (Full-Stack Docker)**: Click the **Deploy to Render** button above. It uses `render.yaml` & `Dockerfile` to launch both the React UI and FastAPI backend on a permanent `https://ployweb-soc.onrender.com` domain for free.
+2. **Vercel (Frontend)**: Click **Deploy with Vercel** or run `vercel` in your terminal to get a permanent `https://team-sync.vercel.app` domain.
+
+---
+
 ## 🛡️ Key Pages & Capabilities
 
 ### 1. 🌐 Landing Page (`/landing`)

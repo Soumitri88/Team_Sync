@@ -600,3 +600,25 @@ async def run_protection_demo():
         "records": executed_records,
         "message": "All threat vectors neutralized. Simulated device safely isolated and credentials revoked."
     }
+
+# ==================== STATIC FILE SERVING FOR FULL-STACK DEPLOYMENT ====================
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "dist")
+
+if os.path.exists(DIST_DIR):
+    assets_dir = os.path.join(DIST_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_frontend(full_path: str):
+        if full_path.startswith("api") or full_path.startswith("ws") or full_path in ["docs", "redoc", "openapi.json"]:
+            raise HTTPException(status_code=404, detail="Endpoint not found")
+        target_file = os.path.join(DIST_DIR, full_path)
+        if os.path.exists(target_file) and os.path.isfile(target_file):
+            return FileResponse(target_file)
+        return FileResponse(os.path.join(DIST_DIR, "index.html"))
+
