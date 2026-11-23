@@ -8,12 +8,21 @@ PloyWeb transforms scattered, noisy security telemetry into a chronological, evi
 
 ---
 
-## 🌐 Live Access URLs (Single Responsive Application)
+## 🌐 Permanent Public Live URL (Works 24/7 Forever, Laptop & Mobile)
 
-- **Public Cloudflare HTTPS URL (Phone, Laptop, Tablet)**: `https://indicated-broad-home-trinity.trycloudflare.com`
-- **Local Host URL (PC)**: `http://localhost:5173`
-- **Local Network URL**: `http://192.168.22.199:5173`
-- **Backend API Docs**: `http://localhost:8000/docs`
+👉 **[https://soumitri88.github.io/Team_Sync/](https://soumitri88.github.io/Team_Sync/)**
+
+- **Hosting**: GitHub Pages Global Edge Network (Fastly CDN + SSL)
+- **Status**: 100% Online & Permanent (No local computer or tunnel needed)
+- **Responsive**: Adapts dynamically to PC, laptop, tablet, and mobile screens
+
+---
+
+## 💻 Local Development & API Docs
+
+- **Local Frontend**: `http://localhost:5173`
+- **Local Backend API**: `http://localhost:8000`
+- **Interactive Swagger Docs**: `http://localhost:8000/docs`
 
 ---
 
