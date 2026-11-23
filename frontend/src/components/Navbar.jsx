@@ -29,26 +29,39 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
 
   const isThreat = stats?.overall_status === 'CRITICAL_THREAT' || stats?.overall_status === 'ELEVATED_RISK';
 
-  const getPageTitle = (path) => {
+  const getPageInfo = (path) => {
     switch (path) {
-      case '/': return 'Dashboard';
-      case '/simulation': return 'Simulator';
-      case '/tracegraph': return 'Attack Path';
-      case '/blast-radius': return 'Blast Radius';
-      case '/incident-response': return 'Incident Response';
-      case '/canary-twin': return 'Decoy Traps';
-      case '/events': return 'Security Logs';
-      case '/evidence': return 'Evidence Ledger';
-      case '/reports': return 'Investigation Report';
-      case '/settings': return 'Settings';
-      default: return 'SOC Console';
+      case '/':
+        return { full: 'Dashboard Overview', short: 'Dashboard' };
+      case '/simulation':
+        return { full: 'Attack Simulator', short: 'Simulator' };
+      case '/tracegraph':
+        return { full: 'Attack Path (TraceGraph)', short: 'Attack Path' };
+      case '/blast-radius':
+        return { full: 'Impact & Blast Radius Analysis', short: 'Blast Radius' };
+      case '/incident-response':
+        return { full: 'Incident Response Actions', short: 'Incident Response' };
+      case '/canary-twin':
+        return { full: 'Decoy Honey-Tokens (Canary)', short: 'Decoy Traps' };
+      case '/events':
+        return { full: 'Security Event Logs & Telemetry', short: 'Security Logs' };
+      case '/evidence':
+        return { full: 'Cryptographic Evidence Ledger (SHA-256)', short: 'Evidence Ledger' };
+      case '/reports':
+        return { full: 'Investigation Report Dossier', short: 'Report Dossier' };
+      case '/settings':
+        return { full: 'Platform & SOC Settings', short: 'Settings' };
+      default:
+        return { full: 'Cyber SOC Console', short: 'Console' };
     }
   };
+
+  const pageInfo = getPageInfo(currentPath);
 
   return (
     <header className="sticky top-0 z-20 bg-[#090e1a]/95 backdrop-blur-md border-b border-slate-800 px-3.5 py-2.5 sm:px-6 sm:py-3">
       <div className="flex items-center justify-between gap-2 sm:gap-4">
-        {/* Left: Hamburger menu on mobile + Page Title */}
+        {/* Left: Mobile Hamburger + Adaptive Title + Threat Badge */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={onToggleSidebar}
@@ -59,7 +72,13 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
           </button>
 
           <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-slate-400 min-w-0">
-            <span className="font-bold text-slate-100 text-xs sm:text-sm truncate">{getPageTitle(currentPath)}</span>
+            {/* Full title on Laptop/PC (md+), clean short title on Phone (<md) */}
+            <span className="font-bold text-slate-100 text-sm hidden md:inline truncate">
+              {pageInfo.full}
+            </span>
+            <span className="font-bold text-slate-100 text-xs md:hidden truncate">
+              {pageInfo.short}
+            </span>
           </div>
 
           <div className="h-4 w-px bg-slate-800 hidden sm:block flex-shrink-0" />
@@ -71,7 +90,8 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
               : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isThreat ? 'bg-red-400 animate-pulse' : 'bg-emerald-400'}`} />
-            <span>{isThreat ? 'Intrusion Detected' : 'Protected'}</span>
+            <span className="hidden lg:inline">{isThreat ? 'Active Intrusion Detected' : 'Environment Secure'}</span>
+            <span className="lg:hidden">{isThreat ? 'Threat' : 'Secure'}</span>
           </div>
         </div>
 
@@ -94,19 +114,23 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
           {!demoActive && (
             <button
               onClick={startDemo}
-              className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+              className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Run Demo</span>
+              <span className="hidden sm:inline">Run Guided Demo</span>
+              <span className="sm:hidden">Demo</span>
             </button>
           )}
 
-          {/* User Name */}
-          <div className="flex items-center gap-1.5 pl-1.5 sm:pl-2 border-l border-slate-800 text-xs">
+          {/* Operator Name */}
+          <div className="flex items-center gap-2 pl-1.5 sm:pl-2 border-l border-slate-800 text-xs">
             <div className="w-6 h-6 rounded-full bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-[10px] font-bold text-cyan-300">
               {user?.avatar || 'AV'}
             </div>
-            <span className="hidden sm:inline text-slate-300 font-medium text-xs">{user?.name || 'Operator'}</span>
+            <div className="hidden sm:block text-left">
+              <span className="text-slate-200 font-medium text-xs block leading-tight">{user?.name || 'Operator'}</span>
+              <span className="text-[10px] text-slate-500 block leading-none">{user?.role || 'SOC Analyst'}</span>
+            </div>
           </div>
         </div>
       </div>

@@ -54,18 +54,20 @@ export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full md:w-auto">
           <button
             onClick={() => onNavigate('/tracegraph')}
-            className="px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+            className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
           >
             <Network className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">Attack Path</span>
+            <span className="hidden sm:inline">View Attack Path</span>
+            <span className="sm:hidden">Attack Path</span>
           </button>
           
           <button
             onClick={startDemo}
-            className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
           >
             <Sparkles className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">{demoActive ? 'Demo Active' : 'Run Demo'}</span>
+            <span className="hidden sm:inline">{demoActive ? 'Demo Active' : 'Run Attack Demo'}</span>
+            <span className="sm:hidden">{demoActive ? 'Demo Active' : 'Run Demo'}</span>
           </button>
 
           <button

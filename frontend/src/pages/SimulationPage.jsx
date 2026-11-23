@@ -138,10 +138,11 @@ export const SimulationPage = ({ onInspectEvidence }) => {
 
           <button
             onClick={stepSimulation}
-            className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
           >
             <SkipForward className="w-3.5 h-3.5" />
-            <span>Step Next</span>
+            <span className="hidden sm:inline">Step Next Event</span>
+            <span className="sm:hidden">Step Next</span>
           </button>
 
           <button

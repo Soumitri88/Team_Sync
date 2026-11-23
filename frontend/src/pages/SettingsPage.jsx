@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Settings as SettingsIcon, 
-  ShieldCheck, 
-  RotateCcw, 
-  Save, 
-  Terminal, 
-  Sliders, 
-  Wifi, 
-  Database, 
-  CheckCircle2, 
+import {
+  Settings as SettingsIcon,
+  ShieldCheck,
+  RotateCcw,
+  Save,
+  Terminal,
+  Sliders,
+  Wifi,
+  Database,
+  CheckCircle2,
   Sparkles,
   Server,
   Lock

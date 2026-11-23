@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  ShieldAlert, 
-  Lock, 
-  UserCheck, 
-  ShieldCheck, 
-  Terminal, 
-  Sparkles, 
-  ArrowRight, 
+import {
+  ShieldAlert,
+  Lock,
+  UserCheck,
+  ShieldCheck,
+  Terminal,
+  Sparkles,
+  ArrowRight,
   KeyRound,
   Fingerprint,
   Cpu,
@@ -76,11 +76,10 @@ export const LoginPage = ({ onLoginSuccess }) => {
                       setSelectedRole(key);
                       setCustomName('');
                     }}
-                    className={`p-3 rounded-xl border text-left transition-all duration-200 relative ${
-                      isSelected
-                        ? 'bg-cyan-950/50 border-cyan-400 shadow-neon-cyan'
-                        : 'bg-[#0d1527]/70 border-slate-800 hover:border-slate-700 hover:bg-[#101b33]'
-                    }`}
+                    className={`p-3 rounded-xl border text-left transition-all duration-200 relative ${isSelected
+                      ? 'bg-cyan-950/50 border-cyan-400 shadow-neon-cyan'
+                      : 'bg-[#0d1527]/70 border-slate-800 hover:border-slate-700 hover:bg-[#101b33]'
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="w-6 h-6 rounded bg-slate-900 border border-cyan-500/30 text-[10px] font-mono font-bold text-cyan-300 flex items-center justify-center">

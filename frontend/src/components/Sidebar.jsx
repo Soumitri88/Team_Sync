@@ -57,9 +57,9 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
         />
       )}
 
-      {/* Sidebar Drawer */}
+      {/* Sidebar Navigation: Docked on PC/Laptop (md+), Drawer on Mobile (<md) */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-64 min-w-[16rem] bg-[#0c1220] border-r border-slate-800 flex flex-col h-screen select-none transition-transform duration-300 ease-in-out ${
+        className={`fixed md:static inset-y-0 left-0 z-50 w-64 min-w-[16rem] flex-shrink-0 bg-[#0c1220] border-r border-slate-800 flex flex-col h-screen select-none transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
         }`}
       >

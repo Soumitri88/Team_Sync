@@ -65,8 +65,8 @@ export function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#070b14] text-slate-100 overflow-hidden font-sans selection:bg-cyan-500 selection:text-black">
-      {/* Sidebar Navigation (Responsive Drawer on Mobile, Static on Desktop) */}
+    <div className="flex h-screen w-full bg-[#070b14] text-slate-100 overflow-hidden font-sans selection:bg-cyan-500 selection:text-black">
+      {/* Sidebar Navigation: Statically docked on PC/Laptop (md+), Slide-over drawer on Phones/Tablets (<md) */}
       <Sidebar
         currentPath={currentPath}
         onNavigate={handleNavigate}
@@ -74,7 +74,7 @@ export function App() {
         onClose={() => setIsMobileNavOpen(false)}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area: Fills remaining viewport smoothly on all devices */}
       <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
         {/* Top Navbar */}
         <Navbar
@@ -84,7 +84,7 @@ export function App() {
         />
 
         {/* Scrollable View Container */}
-        <main className="flex-1 overflow-y-auto px-3.5 py-4 sm:px-6 sm:py-6 relative min-w-0">
+        <main className="flex-1 overflow-y-auto px-3.5 py-4 sm:px-6 sm:py-6 lg:px-8 relative min-w-0">
           {renderActivePage()}
         </main>
       </div>

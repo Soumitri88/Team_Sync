@@ -92,7 +92,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
   }, [onInspectEvidence]);
 
   return (
-    <div className="space-y-3 sm:space-y-4 pb-12 flex flex-col h-[520px] sm:h-[calc(100vh-7rem)] max-w-7xl mx-auto">
+    <div className="space-y-3 sm:space-y-4 pb-2 sm:pb-4 flex flex-col h-[520px] sm:h-[calc(100vh-8.5rem)] max-w-7xl mx-auto">
       {/* Clean Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-shrink-0">
         <div>
@@ -118,7 +118,8 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
             }`}
           >
             <Flame className="w-3.5 h-3.5 text-red-400" />
-            <span>{highlightCriticalOnly ? 'Show All' : 'Highlight Path'}</span>
+            <span className="hidden sm:inline">{highlightCriticalOnly ? 'Show All Paths' : 'Highlight Attack Path'}</span>
+            <span className="sm:hidden">{highlightCriticalOnly ? 'Show All' : 'Highlight Path'}</span>
           </button>
 
           <button
