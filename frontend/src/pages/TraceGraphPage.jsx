@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
@@ -16,20 +16,22 @@ import {
 import { CustomGraphNode } from '../components/CustomGraphNode';
 import { useSecurity } from '../context/SecurityContext';
 
+// Supports both 'custom' and 'customNode' keys to prevent React Flow type mismatch warnings
 const nodeTypes = {
-  custom: CustomGraphNode
+  custom: CustomGraphNode,
+  customNode: CustomGraphNode
 };
 
 export const TraceGraphPage = ({ onInspectEvidence }) => {
   const { attackGraph, refreshAll } = useSecurity();
-  const [highlightCriticalOnly, setHighlightCriticalOnly] = React.useState(false);
+  const [highlightCriticalOnly, setHighlightCriticalOnly] = useState(false);
 
   const rawNodes = attackGraph?.nodes || [];
   const rawEdges = attackGraph?.edges || [];
 
   const filteredNodes = useMemo(() => {
     return rawNodes.map((n) => {
-      const isCritical = n.data?.critical_path;
+      const isCritical = Boolean(n.data?.is_critical_path || n.data?.critical_path);
       const isDimmed = highlightCriticalOnly && !isCritical;
 
       return {
@@ -45,7 +47,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
 
   const filteredEdges = useMemo(() => {
     return rawEdges.map((e) => {
-      const isCrit = e.data?.severity === 'critical';
+      const isCrit = Boolean(e.data?.is_critical_path || e.data?.severity === 'critical');
       const isDimmed = highlightCriticalOnly && !isCrit;
 
       return {
@@ -67,11 +69,11 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(filteredNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(filteredEdges);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setNodes(filteredNodes);
   }, [filteredNodes, setNodes]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setEdges(filteredEdges);
   }, [filteredEdges, setEdges]);
 
@@ -110,7 +112,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
         {/* Legend & Action Controls */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setHighlightCriticalOnly(!highlightCriticalOnly)}
+            onClick={() => setHighlightCriticalOnly((prev) => !prev)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all ${
               highlightCriticalOnly
                 ? 'bg-red-950 text-red-300 border-red-500'
@@ -160,6 +162,14 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
 
       {/* Interactive Flow Canvas */}
       <div className="relative flex-1 w-full rounded-2xl border border-slate-800 overflow-hidden bg-[#070b14] shadow-inner min-h-[350px]">
+        {nodes.length === 0 && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-4 text-center pointer-events-none">
+            <Network className="w-10 h-10 text-slate-700 mb-2" />
+            <p className="text-xs text-slate-400 font-medium">No attack graph nodes yet.</p>
+            <p className="text-[11px] text-slate-500 mt-1">Start a simulation or trigger the Judge Demo to populate telemetry.</p>
+          </div>
+        )}
+
         <ReactFlow
           nodes={nodes}
           edges={edges}
