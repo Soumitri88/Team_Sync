@@ -65,7 +65,7 @@ export function App() {
       case '/landing':
         return <LandingPage onNavigate={handleNavigate} />;
       case '/devices':
-        return <DeviceMonitoringPage onInspectEvidence={handleInspectEvidence} />;
+        return <DeviceMonitoringPage onNavigate={handleNavigate} onInspectEvidence={handleInspectEvidence} />;
       case '/simulation':
         return <SimulationPage onNavigate={handleNavigate} onInspectEvidence={handleInspectEvidence} />;
       case '/events':

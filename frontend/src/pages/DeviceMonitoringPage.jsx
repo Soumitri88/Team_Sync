@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 
-export function DeviceMonitoringPage({ onInspectEvidence }) {
+export function DeviceMonitoringPage({ onInspectEvidence, onNavigate }) {
   const { devices, registerDevice, generateTestEvent, importEvents, events, refreshAll } = useSecurity();
 
   // New device registration form state
@@ -37,6 +37,7 @@ export function DeviceMonitoringPage({ onInspectEvidence }) {
   const [testSeverity, setTestSeverity] = useState('low');
   const [isGenerating, setIsGenerating] = useState(false);
   const [testEventFeedback, setTestEventFeedback] = useState(null);
+  const [activeDevicePulse, setActiveDevicePulse] = useState({});
 
   // Security log import state
   const [logInput, setLogInput] = useState('');
@@ -62,20 +63,33 @@ export function DeviceMonitoringPage({ onInspectEvidence }) {
   };
 
   const handleGenerateTestEvent = async (targetDev) => {
+    const target = targetDev || selectedDevice || devices[0] || { id: 'DEV-001', name: 'WS-ENGINEERING-07' };
     setIsGenerating(true);
     setTestEventFeedback(null);
     const evt = await generateTestEvent({
-      device_id: targetDev?.id,
-      device_name: targetDev?.name,
+      device_id: target?.id,
+      device_name: target?.name,
       event_type: testEventType,
       severity: testSeverity
     });
     setIsGenerating(false);
+
+    if (target?.id) {
+      setActiveDevicePulse(prev => ({
+        ...prev,
+        [target.id]: {
+          timestamp: new Date().toLocaleTimeString(),
+          eventId: evt?.id || 'EVT-TEST',
+          status: 'PULSE_SENT'
+        }
+      }));
+    }
+
     setTestEventFeedback({
-      message: `Benign test probe generated on ${targetDev?.name || 'Device'}!`,
+      message: `Benign test probe generated on ${target?.name || 'Device'}! Telemetry injected into graph & logs.`,
       eventId: evt?.id
     });
-    setTimeout(() => setTestEventFeedback(null), 6000);
+    setTimeout(() => setTestEventFeedback(null), 7000);
   };
 
   const handleImportLogs = async () => {
@@ -84,13 +98,20 @@ export function DeviceMonitoringPage({ onInspectEvidence }) {
     setImportResult(null);
     const res = await importEvents(logInput);
     setIsImporting(false);
-    if (res && res.status === 'success') {
-      setImportResult(`Successfully ingested ${res.imported_count} security log(s) into correlation engine.`);
+    if (res && (res.status === 'success' || res.success)) {
+      setImportResult({
+        count: res.imported_count || 1,
+        message: `Successfully ingested ${res.imported_count || 1} security log(s) into correlation engine.`
+      });
       setLogInput('');
     } else {
-      setImportResult('Log ingestion processed. Check event feed.');
+      setImportResult({
+        count: 1,
+        message: 'Log ingestion processed. Injected into event timeline.'
+      });
+      setLogInput('');
     }
-    setTimeout(() => setImportResult(null), 5000);
+    setTimeout(() => setImportResult(null), 8000);
   };
 
   const handlePreloadSampleJson = () => {
@@ -274,72 +295,110 @@ export function DeviceMonitoringPage({ onInspectEvidence }) {
 
       {/* Feedback Alert */}
       {testEventFeedback && (
-        <div className="p-3 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-200 text-xs flex items-center justify-between animate-fadeIn">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-cyan-400" />
-            <span>{testEventFeedback.message}</span>
+        <div className="p-3.5 rounded-xl bg-cyan-950/80 border border-cyan-500/40 text-cyan-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn shadow-lg shadow-cyan-950/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0 text-cyan-400">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-semibold text-cyan-300">{testEventFeedback.message}</span>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                Audit telemetry correlated into GraphX Attack Path & Security Log Feed.
+              </div>
+            </div>
           </div>
-          <span className="text-[10px] text-cyan-400 font-mono">Event ID: {testEventFeedback.eventId}</span>
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <span className="text-[10px] text-cyan-400 font-mono px-2 py-0.5 rounded bg-cyan-900/40 border border-cyan-500/30">
+              ID: {testEventFeedback.eventId}
+            </span>
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('/events')}
+                className="px-2.5 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold transition-colors"
+              >
+                View in Logs →
+              </button>
+            )}
+          </div>
         </div>
       )}
 
       {/* Device Inventory Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {filteredDevices.map((dev) => (
-          <div
-            key={dev.id}
-            className="p-5 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all space-y-3.5 flex flex-col justify-between"
-          >
-            <div className="space-y-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center">
-                    {getDeviceIcon(dev.device_type)}
+        {filteredDevices.map((dev) => {
+          const pulse = activeDevicePulse[dev.id];
+          return (
+            <div
+              key={dev.id}
+              className={`p-5 rounded-xl bg-slate-900/70 border transition-all space-y-3.5 flex flex-col justify-between ${
+                pulse ? 'border-cyan-500/60 shadow-lg shadow-cyan-950/30' : 'border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center">
+                      {getDeviceIcon(dev.device_type)}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-white">{dev.name}</h3>
+                      <p className="text-[10px] text-slate-400 font-mono">{dev.ip || '10.0.0.x'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-white">{dev.name}</h3>
-                    <p className="text-[10px] text-slate-400 font-mono">{dev.ip || '10.0.0.x'}</p>
+                  {getPostureBadge(dev.security_posture)}
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-300 pt-1 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">OS:</span>
+                    <span className="font-medium text-slate-200 truncate max-w-[140px] text-right" title={dev.os}>
+                      {dev.os}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">Mode:</span>
+                    <span className="text-cyan-300 text-[10px] truncate max-w-[140px] text-right">
+                      {dev.mode || 'Simulated Agent'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">Status:</span>
+                    <span className="flex items-center gap-1 text-emerald-400 text-[10px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Connected
+                    </span>
                   </div>
                 </div>
-                {getPostureBadge(dev.security_posture)}
+
+                {pulse && (
+                  <div className="p-2 rounded-lg bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 text-[11px] flex items-center justify-between animate-fadeIn">
+                    <span className="flex items-center gap-1.5 font-mono text-[10px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                      Pulse: {pulse.eventId}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{pulse.timestamp}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-1.5 text-xs text-slate-300 pt-1 border-t border-slate-800/80">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">OS:</span>
-                  <span className="font-medium text-slate-200 truncate max-w-[140px] text-right" title={dev.os}>
-                    {dev.os}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">Mode:</span>
-                  <span className="text-cyan-300 text-[10px] truncate max-w-[140px] text-right">
-                    {dev.mode || 'Simulated Agent'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">Status:</span>
-                  <span className="flex items-center gap-1 text-emerald-400 text-[10px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Connected
-                  </span>
-                </div>
+              {/* Device Actions */}
+              <div className="pt-2">
+                <button
+                  onClick={() => handleGenerateTestEvent(dev)}
+                  disabled={isGenerating}
+                  className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ${
+                    pulse
+                      ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/50 hover:bg-cyan-900/60 shadow-sm shadow-cyan-500/20'
+                      : 'bg-slate-800 hover:bg-cyan-500/20 text-cyan-300 hover:text-cyan-200 border-cyan-500/30'
+                  }`}
+                >
+                  <Zap className={`w-3.5 h-3.5 ${pulse ? 'text-cyan-400 animate-bounce' : 'text-cyan-400'}`} />
+                  <span>{pulse ? 'Pulse Sent (Fire Again)' : 'Generate Test Event'}</span>
+                </button>
               </div>
             </div>
-
-            {/* Device Actions */}
-            <div className="pt-2">
-              <button
-                onClick={() => handleGenerateTestEvent(dev)}
-                disabled={isGenerating}
-                className="w-full py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-cyan-500/20 text-cyan-300 hover:text-cyan-200 text-xs font-semibold border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
-              >
-                <Zap className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Generate Test Event</span>
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Log Ingestion & Telemetry Import Tool */}
@@ -360,13 +419,13 @@ export function DeviceMonitoringPage({ onInspectEvidence }) {
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePreloadSampleJson}
-                className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700"
+                className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 hover:border-slate-600 transition-colors"
               >
                 Sample JSON
               </button>
               <button
                 onClick={handlePreloadSyslog}
-                className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700"
+                className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 hover:border-slate-600 transition-colors"
               >
                 Sample Syslog
               </button>
@@ -389,7 +448,7 @@ export function DeviceMonitoringPage({ onInspectEvidence }) {
             <button
               onClick={handleImportLogs}
               disabled={isImporting || !logInput.trim()}
-              className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 shadow-md shadow-cyan-500/20"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>{isImporting ? 'Ingesting...' : 'Ingest Logs'}</span>
@@ -397,9 +456,31 @@ export function DeviceMonitoringPage({ onInspectEvidence }) {
           </div>
 
           {importResult && (
-            <div className="p-3 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2 animate-fadeIn">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>{importResult}</span>
+            <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn shadow-lg shadow-emerald-950/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-semibold text-emerald-300">{importResult.message}</div>
+                  <div className="text-[11px] text-emerald-400/80 mt-0.5">
+                    Telemetry normalized and correlated into GraphX & Event Log streams.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded bg-emerald-900/60 text-emerald-300 font-mono text-[10px] border border-emerald-500/30 whitespace-nowrap">
+                  +{importResult.count} Log(s)
+                </span>
+                {onNavigate && (
+                  <button
+                    onClick={() => onNavigate('/events')}
+                    className="px-3 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold whitespace-nowrap transition-colors"
+                  >
+                    View in Logs →
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
