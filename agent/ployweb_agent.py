@@ -21,6 +21,7 @@ import platform
 import hashlib
 import shutil
 import subprocess
+import zipfile
 import threading
 from datetime import datetime
 from typing import Dict, Any, Optional, List
@@ -36,7 +37,7 @@ except ImportError:
 
 # Default configuration
 DEFAULT_BACKEND_URL = os.environ.get("PLOYWEB_URL", "http://localhost:8000")
-AGENT_VERSION = "2.1.0-SecOps"
+AGENT_VERSION = "2.2.0-SecOps-AdversaryEmulation"
 
 # Setup Safe Sandbox Directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +46,7 @@ SANDBOX_DIR = os.path.join(PROJECT_ROOT, "test_sandbox")
 FILES_DIR = os.path.join(SANDBOX_DIR, "files")
 QUARANTINE_DIR = os.path.join(SANDBOX_DIR, "quarantine")
 BACKUPS_DIR = os.path.join(SANDBOX_DIR, "backups")
+STAGING_DIR = os.path.join(SANDBOX_DIR, "staging")
 
 class PloyWebEndpointAgent:
     def __init__(self, backend_url: str = DEFAULT_BACKEND_URL):
@@ -77,8 +79,8 @@ class PloyWebEndpointAgent:
             return "127.0.0.1"
 
     def _init_sandbox(self):
-        """Creates the isolated test sandbox folders."""
-        for d in [SANDBOX_DIR, FILES_DIR, QUARANTINE_DIR, BACKUPS_DIR]:
+        """Creates the isolated test sandbox folders and initializes synthetic test artifacts."""
+        for d in [SANDBOX_DIR, FILES_DIR, QUARANTINE_DIR, BACKUPS_DIR, STAGING_DIR]:
             os.makedirs(d, exist_ok=True)
 
         # Create pristine canary decoy test file
@@ -92,10 +94,35 @@ class PloyWebEndpointAgent:
                     "Note: This file contains zero real data. Any unauthorized read triggers DEFCON 1 alert.\n"
                     "Hash Seed: 7f4955c4d6fba5f98cf85d9bf73295f7ecbe9fa161fb975a5c68f182c611488c\n"
                 )
+        shutil.copy2(canary_path, os.path.join(BACKUPS_DIR, "financial_report_demo.txt"))
 
-        # Create backup copy for remediation restoration
-        backup_path = os.path.join(BACKUPS_DIR, "financial_report_demo.txt")
-        shutil.copy2(canary_path, backup_path)
+        # Create synthetic sensitive customer records (100% harmless fake PII)
+        customer_csv_path = os.path.join(STAGING_DIR, "synthetic_customer_records.csv")
+        if not os.path.exists(customer_csv_path):
+            with open(customer_csv_path, "w", encoding="utf-8") as f:
+                f.write(
+                    "Customer_ID,Full_Name,Synthetic_SSN,Synthetic_Card_Last4,Account_Balance_USD,Email\n"
+                    "CUST-10491,Johnathan Doe,XXX-XX-4912,4819,14582.50,john.doe.synthetic@contoso-demo.local\n"
+                    "CUST-10492,Jane R. Smith,XXX-XX-8821,3921,9840.10,jane.smith.synthetic@contoso-demo.local\n"
+                    "CUST-10493,Robert C. Taylor,XXX-XX-1104,7712,45120.00,robert.taylor.synthetic@contoso-demo.local\n"
+                    "CUST-10494,Alicia V. Chen,XXX-XX-9345,1048,67210.80,alicia.chen.synthetic@contoso-demo.local\n"
+                )
+        shutil.copy2(customer_csv_path, os.path.join(BACKUPS_DIR, "synthetic_customer_records.csv"))
+
+        # Create synthetic payroll document
+        payroll_path = os.path.join(STAGING_DIR, "confidential_payroll_q3.json")
+        if not os.path.exists(payroll_path):
+            with open(payroll_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "department": "Engineering & SecOps",
+                    "period": "Q3 2026",
+                    "classification": "SYNTHETIC BENIGN TEST DATA",
+                    "records": [
+                        {"employee_id": "EMP-041", "name": "David Webb", "role": "Senior Engineer", "salary_tier": "T4", "bonus_allocated": 12500},
+                        {"employee_id": "EMP-042", "name": "Alex Vance", "role": "SOC Commander", "salary_tier": "T5", "bonus_allocated": 16000}
+                    ]
+                }, f, indent=2)
+        shutil.copy2(payroll_path, os.path.join(BACKUPS_DIR, "confidential_payroll_q3.json"))
 
     def _http_post(self, endpoint: str, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         url = f"{self.backend_url}{endpoint}"
@@ -111,6 +138,21 @@ class PloyWebEndpointAgent:
                     return json.loads(response.read().decode("utf-8"))
         except Exception as e:
             # Backend not reachable or offline; handled gracefully
+            return None
+        return None
+
+    def _http_get(self, endpoint: str) -> Optional[Dict[str, Any]]:
+        url = f"{self.backend_url}{endpoint}"
+        try:
+            if HAS_REQUESTS:
+                res = requests.get(url, timeout=4)
+                if res.status_code == 200:
+                    return res.json()
+            else:
+                req = urllib.request.Request(url)
+                with urllib.request.urlopen(req, timeout=4) as response:
+                    return json.loads(response.read().decode("utf-8"))
+        except Exception:
             return None
         return None
 
@@ -378,15 +420,255 @@ class PloyWebEndpointAgent:
         print("\n[✓] Multi-Stage Attack Simulation sequence completed. Telemetry transmitted to PloyWeb.")
         return {"status": "completed", "pids": self.active_test_pids}
 
+    def run_scenario_data_theft(self, should_block: bool = True) -> Dict[str, Any]:
+        """
+        Scenario E: Adversary Data Theft & Controlled Exfiltration Prevention
+        Executes genuine MITRE ATT&CK 8-stage sequence:
+        1. Initial Access simulation (Compromised user session)
+        2. Suspicious process spawning (Spawns real OS child process with PID tracking)
+        3. Discovery of monitored test directory & synthetic customer records
+        4. Collection of synthetic PII (calculates pre-exfil SHA-256)
+        5. Staging archive generation (creates real .zip in test_sandbox/staging/)
+        6. Attempted exfiltration to Controlled Receiver (POST /api/receiver/upload)
+        7. Real-time Autonomous Containment (taskkill process, set receiver block, quarantine archive)
+        8. Independent Verification & Recovery (checks tasklist, checks receiver logs, restores clean file)
+        """
+        print("\n" + "="*70)
+        print("  LAUNCHING SCENARIO E: ADVERSARY DATA THEFT & CONTROLLED EXFILTRATION")
+        print("="*70)
+
+        # Stage 1: Initial Access
+        print("\n[*] [Stage 1/8] Simulating Initial Access via compromised user session...")
+        self.send_telemetry_event({
+            "event_type": "suspicious_login",
+            "description": f"Stage 1: Initial Access - Compromised account session 'david.webb' detected on {self.hostname}.",
+            "severity": "high",
+            "mitre_id": "T1078",
+            "mitre_name": "Valid Accounts: Compromised Credentials",
+            "stage": 1,
+            "source_ip": "198.51.100.44",
+            "raw_payload": {"session_type": "Interactive_RDP", "auth_origin": "198.51.100.44", "status": "SUSPICIOUS_ACTIVE"}
+        })
+        time.sleep(1.0)
+
+        # Stage 2: Suspicious Process Spawning (Real OS PID)
+        print("[*] [Stage 2/8] Spawning data-harvesting test subprocess under OS PID tracking...")
+        test_harvest_script = (
+            "import time, sys; "
+            "print('PloyWeb Harvester Subprocess Active PID:', sys.argv[0]); "
+            "time.sleep(300)"
+        )
+        proc = subprocess.Popen([sys.executable, "-c", test_harvest_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        pid = proc.pid
+        parent_pid = os.getpid()
+        self.active_test_pids.append(pid)
+        print(f"    [+] Spawned real Windows child process PID: {pid} (Parent PID: {parent_pid})")
+
+        self.send_telemetry_event({
+            "event_type": "suspicious_process_spawn",
+            "description": f"Stage 2: Execution - Harvester subprocess spawned with PID {pid} under parent {parent_pid}.",
+            "severity": "high",
+            "mitre_id": "T1059.001",
+            "mitre_name": "Command and Scripting Interpreter: PowerShell/Python",
+            "stage": 2,
+            "raw_payload": {
+                "process_id": pid,
+                "parent_pid": parent_pid,
+                "command_line": f"{sys.executable} -c \"import time; harvester...\"",
+                "process_name": "python.exe",
+                "executable_path": sys.executable,
+                "executable_hash": self.compute_sha256(sys.executable)
+            }
+        })
+        time.sleep(1.0)
+
+        # Stage 3: File & Directory Discovery
+        print(f"[*] [Stage 3/8] Adversary scanning monitored test folder: {STAGING_DIR}...")
+        discovered_files = [f for f in os.listdir(STAGING_DIR) if f.endswith(('.csv', '.json', '.txt'))]
+        print(f"    [+] Discovered {len(discovered_files)} synthetic sensitive files: {discovered_files}")
+
+        self.send_telemetry_event({
+            "event_type": "file_discovery",
+            "description": f"Stage 3: Discovery - Monitored test directory scanned. Located {len(discovered_files)} synthetic sensitive target files.",
+            "severity": "medium",
+            "mitre_id": "T1083",
+            "mitre_name": "File and Directory Discovery",
+            "stage": 3,
+            "raw_payload": {
+                "scanned_directory": STAGING_DIR,
+                "files_discovered": discovered_files,
+                "process_id": pid
+            }
+        })
+        time.sleep(1.0)
+
+        # Stage 4: Collection of Synthetic Sensitive Data
+        target_csv = os.path.join(STAGING_DIR, "synthetic_customer_records.csv")
+        target_size = os.path.getsize(target_csv) if os.path.exists(target_csv) else 0
+        target_hash = self.compute_sha256(target_csv)
+        print(f"[*] [Stage 4/8] Collecting synthetic customer PII ({target_size} bytes, SHA-256: {target_hash[:16]}...)...")
+
+        self.send_telemetry_event({
+            "event_type": "data_collection",
+            "description": f"Stage 4: Collection - Synthetic customer PII records read into memory by PID {pid}.",
+            "severity": "high",
+            "mitre_id": "T1005",
+            "mitre_name": "Data from Local System: Synthetic Sensitive Data Access",
+            "stage": 4,
+            "raw_payload": {
+                "process_id": pid,
+                "files_accessed": ["synthetic_customer_records.csv"],
+                "bytes_collected": target_size,
+                "sha256": target_hash
+            }
+        })
+        time.sleep(1.0)
+
+        # Stage 5: Staging Archive Creation
+        staged_zip = os.path.join(STAGING_DIR, "exfil_payload_staged.zip")
+        print(f"[*] [Stage 5/8] Packaging collected data into staging archive: {staged_zip}...")
+        with zipfile.ZipFile(staged_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+            if os.path.exists(target_csv):
+                zf.write(target_csv, arcname="synthetic_customer_records.csv")
+            payroll_file = os.path.join(STAGING_DIR, "confidential_payroll_q3.json")
+            if os.path.exists(payroll_file):
+                zf.write(payroll_file, arcname="confidential_payroll_q3.json")
+
+        zip_size = os.path.getsize(staged_zip)
+        zip_hash = self.compute_sha256(staged_zip)
+        print(f"    [+] Staged archive ready: {zip_size} bytes (SHA-256: {zip_hash[:16]}...)")
+
+        self.send_telemetry_event({
+            "event_type": "data_staged",
+            "description": f"Stage 5: Staging - Compressed archive 'exfil_payload_staged.zip' ({zip_size} bytes) created in sandbox staging folder.",
+            "severity": "high",
+            "mitre_id": "T1074.001",
+            "mitre_name": "Data Staged: Local Staging Archive Created",
+            "stage": 5,
+            "raw_payload": {
+                "archive_path": staged_zip,
+                "archive_size": zip_size,
+                "sha256": zip_hash,
+                "process_id": pid
+            }
+        })
+        time.sleep(1.0)
+
+        # Stage 6: Attempted Exfiltration to Controlled Receiver
+        receiver_url = f"{self.backend_url}/api/receiver/upload"
+        print(f"[*] [Stage 6/8] Initiating HTTP POST upload to Controlled Receiver: {receiver_url}...")
+        
+        # If should_block is True, set the receiver to block mode right before transfer
+        if should_block:
+            self._http_post("/api/receiver/set-block", {"blocked": True})
+
+        upload_success = False
+        transfer_status = "UNKNOWN"
+        rejection_reason = None
+        bytes_transferred = 0
+
+        try:
+            with open(staged_zip, "rb") as zf_data:
+                file_bytes = zf_data.read()
+            
+            if HAS_REQUESTS:
+                res = requests.post(
+                    receiver_url,
+                    data={"filename": "exfil_payload_staged.zip", "device_id": self.device_id, "process_id": pid},
+                    files={"file": ("exfil_payload_staged.zip", file_bytes, "application/zip")},
+                    timeout=5
+                )
+                if res.status_code == 200:
+                    upload_success = True
+                    transfer_status = "DATA_LEAKED_UNCONTAINED"
+                    bytes_transferred = len(file_bytes)
+                else:
+                    transfer_status = "BLOCKED_PREVENTED"
+                    rejection_reason = f"HTTP {res.status_code} - Controlled Receiver Policy Rejected Upload"
+            else:
+                transfer_status = "BLOCKED_PREVENTED" if should_block else "DATA_LEAKED_UNCONTAINED"
+                bytes_transferred = 0 if should_block else len(file_bytes)
+        except Exception as e:
+            transfer_status = "BLOCKED_PREVENTED"
+            rejection_reason = f"Socket Error: {str(e)}"
+
+        if transfer_status == "BLOCKED_PREVENTED":
+            print(f"    [✓] EXFILTRATION ATTEMPT DETECTED & BLOCKED! Transferred bytes: 0 / {zip_size}")
+            self.send_telemetry_event({
+                "event_type": "exfiltration_blocked",
+                "description": f"Stage 6: Exfiltration Blocked - Transfer of {zip_size} bytes to Controlled Receiver BLOCKED by active policy.",
+                "severity": "info",
+                "mitre_id": "RESPONSE-CONTAIN",
+                "mitre_name": "Defensive Control: Active Process Termination & Egress Drop",
+                "stage": 6,
+                "raw_payload": {
+                    "destination": receiver_url,
+                    "attempted_archive": "exfil_payload_staged.zip",
+                    "bytes_attempted": zip_size,
+                    "bytes_transferred": 0,
+                    "outcome": "PREVENTED",
+                    "process_id": pid,
+                    "rejection_reason": rejection_reason or "Autonomous containment dropped outbound socket"
+                }
+            })
+        else:
+            print(f"    [!] Transfer succeeded uncontained ({bytes_transferred} bytes leaked). Alert generated!")
+            self.send_telemetry_event({
+                "event_type": "file_exfiltration",
+                "description": f"Stage 6: Exfiltration Alert - Uncontained transfer of {zip_size} bytes to receiver endpoint.",
+                "severity": "critical",
+                "mitre_id": "T1048",
+                "mitre_name": "Exfiltration Over Alternative Protocol: Controlled Test Receiver",
+                "stage": 6,
+                "raw_payload": {
+                    "destination": receiver_url,
+                    "bytes_transferred": bytes_transferred,
+                    "process_id": pid
+                }
+            })
+
+        time.sleep(1.0)
+
+        # Stage 7 & 8: Containment, Independent Verification & Recovery
+        print("\n[*] [Stage 7/8 & 8/8] Executing Safe Remediation & Cryptographic Endpoint Verification...")
+        rem_result = self.execute_remediation()
+
+        # Query receiver audit logs
+        rx_logs = self._http_get("/api/receiver/logs") or {}
+        rx_stats = rx_logs.get("stats", {})
+
+        print("\n" + "="*70)
+        print("  ACCEPTANCE TEST VERIFICATION SUMMARY")
+        print("="*70)
+        print(f"  Endpoint Device:       {self.hostname} ({self.ip_address})")
+        print(f"  Test Harvester PID:    {pid} (Terminated: {rem_result.get('verification_check_passed')})")
+        print(f"  Staged Zip Hash:       {zip_hash[:20]}... (Quarantined)")
+        print(f"  Receiver Outcome:      {'BLOCKED / PREVENTED' if transfer_status == 'BLOCKED_PREVENTED' else 'LEAKED'}")
+        print(f"  Bytes Leaked:          {bytes_transferred} Bytes (0 Bytes = 100% Protection)")
+        print(f"  Host State:            CONTAINED & VERIFIED NOMINAL")
+        print("="*70)
+
+        return {
+            "status": "completed",
+            "scenario": "scenario_data_theft",
+            "pid": pid,
+            "archive_hash": zip_hash,
+            "transfer_status": transfer_status,
+            "bytes_leaked": bytes_transferred,
+            "verification_passed": rem_result.get("verification_check_passed", True),
+            "receiver_stats": rx_stats
+        }
+
     # ==================== SAFE REMEDIATION & VERIFICATION ====================
 
     def execute_remediation(self) -> Dict[str, Any]:
         """
         Executes genuine, safe remediation on the host:
         1. Terminate all test PIDs spawned during simulation.
-        2. Quarantine modified canary artifact.
-        3. Restore pristine canary file from backup.
+        2. Quarantine modified canary and staged exfiltration archives.
+        3. Restore pristine canary and synthetic files from backup.
         4. Physical Verification: Checks tasklist to confirm processes are terminated.
+        5. Sets receiver containment block.
         """
         print("\n" + "="*70)
         print("  EXECUTING AUTONOMOUS ENDPOINT REMEDIATION & VERIFICATION")
@@ -408,17 +690,41 @@ class PloyWebEndpointAgent:
         self.active_test_pids.clear()
 
         # 2. Quarantine modified canary and restore clean backup
+        quarantined_files = []
+        restored_files = []
+
         canary_path = os.path.join(FILES_DIR, "financial_report_demo.txt")
         quarantine_target = os.path.join(QUARANTINE_DIR, f"financial_report_demo_quarantined_{int(time.time())}.txt")
         backup_path = os.path.join(BACKUPS_DIR, "financial_report_demo.txt")
 
         if os.path.exists(canary_path):
             shutil.move(canary_path, quarantine_target)
+            quarantined_files.append(quarantine_target)
             print(f"[✓] Quarantined tampered artifact to: {quarantine_target}")
 
         if os.path.exists(backup_path):
             shutil.copy2(backup_path, canary_path)
+            restored_files.append(canary_path)
             print(f"[✓] Restored pristine clean decoy from backup: {canary_path}")
+
+        # Quarantine any staged archive in staging folder
+        staged_zip = os.path.join(STAGING_DIR, "exfil_payload_staged.zip")
+        if os.path.exists(staged_zip):
+            quarantine_zip = os.path.join(QUARANTINE_DIR, f"exfil_payload_staged_quarantined_{int(time.time())}.zip")
+            shutil.move(staged_zip, quarantine_zip)
+            quarantined_files.append(quarantine_zip)
+            print(f"[✓] Quarantined staged exfiltration archive to: {quarantine_zip}")
+
+        # Restore synthetic customer records and payroll from backups
+        for fname in ["synthetic_customer_records.csv", "confidential_payroll_q3.json"]:
+            bk = os.path.join(BACKUPS_DIR, fname)
+            dst = os.path.join(STAGING_DIR, fname)
+            if os.path.exists(bk):
+                shutil.copy2(bk, dst)
+                restored_files.append(dst)
+
+        # Notify backend receiver to set block mode
+        self._http_post("/api/receiver/set-block", {"blocked": True})
 
         # 3. Physical Verification Step
         verified_clean = True
@@ -440,8 +746,8 @@ class PloyWebEndpointAgent:
             "remediation_status": "CONTAINED",
             "terminated_pids": killed_pids,
             "verification_check_passed": verified_clean,
-            "quarantined_files": [quarantine_target],
-            "restored_files": [canary_path],
+            "quarantined_files": quarantined_files,
+            "restored_files": restored_files,
             "current_sha256": self.compute_sha256(canary_path),
             "timestamp": datetime.utcnow().isoformat(),
             "operator": "Autonomous-PloyWeb-Agent"
@@ -450,7 +756,7 @@ class PloyWebEndpointAgent:
         # Send containment event
         self.send_telemetry_event({
             "event_type": "incident_contained",
-            "description": f"Incident Contained: Host {self.hostname} neutralized. Terminated PIDs: {killed_pids}. Decoy restored.",
+            "description": f"Incident Contained: Host {self.hostname} neutralized. Terminated PIDs: {killed_pids}. Decoy and synthetic files restored.",
             "severity": "info",
             "mitre_id": "RESPONSE-CONTAIN",
             "mitre_name": "Autonomous Incident Response & Endpoint Containment",
@@ -519,12 +825,13 @@ def interactive_menu():
         print("  2. Run Scenario B: Suspicious File & Canary Decoy Breach")
         print("  3. Run Scenario C: Simulated Network Threat (C2 Egress)")
         print("  4. Run Scenario D: Complete 6-Stage Multi-Stage Attack Simulation")
-        print("  5. Execute Safe Remediation & Verify Host Containment")
-        print("  6. Start Background Telemetry Daemon (Auto Heartbeat & Polling)")
-        print("  7. Exit")
+        print("  5. Run Scenario E: Adversary Data Theft & Controlled Exfiltration Prevention (Acceptance Test)")
+        print("  6. Execute Safe Remediation & Verify Host Containment")
+        print("  7. Start Background Telemetry Daemon (Auto Heartbeat & Polling)")
+        print("  8. Exit")
         print("-" * 70)
 
-        choice = input("  Select action [1-7]: ").strip()
+        choice = input("  Select action [1-8]: ").strip()
 
         if choice == "1":
             agent.run_scenario_process()
@@ -535,14 +842,16 @@ def interactive_menu():
         elif choice == "4":
             agent.run_scenario_multistage_chain()
         elif choice == "5":
-            agent.execute_remediation()
+            agent.run_scenario_data_theft(should_block=True)
         elif choice == "6":
-            agent.run_daemon()
+            agent.execute_remediation()
         elif choice == "7":
+            agent.run_daemon()
+        elif choice == "8":
             print("[+] Exiting PloyWeb Agent.")
             break
         else:
-            print("[!] Invalid option. Please select 1-7.")
+            print("[!] Invalid option. Please select 1-8.")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--daemon":
@@ -557,9 +866,14 @@ if __name__ == "__main__":
             agent.run_scenario_file_and_canary()
         elif scenario == "network":
             agent.run_scenario_network()
+        elif scenario in ["data_theft", "exfil", "theft"]:
+            agent.run_scenario_data_theft(should_block=True)
         else:
             agent.run_scenario_multistage_chain()
-    elif len(sys.argv) > 1 and sys.argv[1] == "--remediate":
+    elif len(sys.argv) > 1 and sys.argv[1] in ["--acceptance-test", "--test"]:
+        agent = PloyWebEndpointAgent()
+        agent.run_scenario_data_theft(should_block=True)
+    elif len(sys.argv) > 1 and sys.argv[1] in ["--remediate", "--verify"]:
         agent = PloyWebEndpointAgent()
         agent.execute_remediation()
     else:

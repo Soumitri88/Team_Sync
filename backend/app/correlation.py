@@ -15,7 +15,14 @@ MITRE_TACTICS_MAP = {
     "file_exfiltration": {"id": "T1048", "tactic": "Exfiltration", "name": "Exfiltration Over Alternative Protocol"},
     "c2_beacon": {"id": "T1071", "tactic": "Command and Control", "name": "Application Layer Protocol"},
     "reconnaissance": {"id": "T1046", "tactic": "Discovery", "name": "Network Service Discovery"},
-    "persistence": {"id": "T1053", "tactic": "Persistence", "name": "Scheduled Task / Job"}
+    "persistence": {"id": "T1053", "tactic": "Persistence", "name": "Scheduled Task / Job"},
+    "suspicious_process_spawn": {"id": "T1059.001", "tactic": "Execution", "name": "Command and Scripting Interpreter: PowerShell/Python"},
+    "file_discovery": {"id": "T1083", "tactic": "Discovery", "name": "File and Directory Discovery"},
+    "data_collection": {"id": "T1005", "tactic": "Collection", "name": "Data from Local System: Synthetic Sensitive Data Access"},
+    "data_staged": {"id": "T1074.001", "tactic": "Collection", "name": "Data Staged: Local Staging Archive Created"},
+    "exfiltration_attempt": {"id": "T1048", "tactic": "Exfiltration", "name": "Exfiltration Over Alternative Protocol: Controlled Test Receiver"},
+    "exfiltration_blocked": {"id": "RESPONSE-CONTAIN", "tactic": "Containment", "name": "Defensive Control: Active Process Termination & Egress Drop"},
+    "incident_contained": {"id": "VERIFIED-CLEAN", "tactic": "Verification", "name": "Cryptographic Verification & Host Recovery"}
 }
 
 def normalize_log(raw_log: Dict[str, Any]) -> Dict[str, Any]:

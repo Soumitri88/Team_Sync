@@ -14,13 +14,18 @@ import {
   KeyRound,
   Lock,
   AlertTriangle,
-  Info
+  Info,
+  Flame,
+  Terminal,
+  Copy,
+  Check,
+  Globe
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
 
 export function IncidentResponsePage({ onNavigate }) {
-  const { actions, executeResponseAction, runProtectionDemo, stats } = useSecurity();
+  const { actions, executeResponseAction, executeRemediationAndVerify, runProtectionDemo, stats } = useSecurity();
   const { user } = useAuth();
   const [selectedTarget, setSelectedTarget] = useState({
     review_logins: 'david.webb',
@@ -34,6 +39,7 @@ export function IncidentResponsePage({ onNavigate }) {
   const [isRunningProtectionDemo, setIsRunningProtectionDemo] = useState(false);
   const [lastActionResult, setLastActionResult] = useState(null);
   const [protectionDemoSuccess, setProtectionDemoSuccess] = useState(null);
+  const [copiedHash, setCopiedHash] = useState(false);
 
   const responsePlaybooks = [
     {
@@ -144,12 +150,86 @@ export function IncidentResponsePage({ onNavigate }) {
         {/* Action Button: RUN PROTECTION DEMO */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-shrink-0">
           <button
-            onClick={handleRunProtectionDemo}
+            onClick={async () => {
+              setIsRunningProtectionDemo(true);
+              setProtectionDemoSuccess(null);
+              try {
+                const res = await executeRemediationAndVerify();
+                setProtectionDemoSuccess({
+                  device_status: 'CONTAINED',
+                  message: res.message || 'Adversary harvester PID 5124 killed, Controlled Receiver egress dropped (0 bytes leaked).'
+                });
+              } finally {
+                setIsRunningProtectionDemo(false);
+              }
+            }}
             disabled={isRunningProtectionDemo}
             className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
           >
-            <Sparkles className="w-4 h-4 fill-black text-black" />
-            <span>{isRunningProtectionDemo ? 'RUNNING CONTAINMENT...' : 'RUN PROTECTION DEMO'}</span>
+            <ShieldCheck className="w-4 h-4 fill-black text-black" />
+            <span>{isRunningProtectionDemo ? 'RUNNING CONTAINMENT...' : 'ENGAGE DEFENSIVE CONTAINMENT'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Adversary Threat Containment & Controlled Receiver Status Card */}
+      <div className="p-5 rounded-2xl bg-[#070b14] border border-cyan-500/40 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <Flame className="w-5 h-5 text-red-400" />
+            <h2 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+              Adversary Breach Containment & Controlled Receiver Shield
+            </h2>
+          </div>
+          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40 self-start sm:self-auto">
+            TARGET: WS-ENGINEERING-07 (PID 5124)
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-400 text-[10px] block">Attacker Exfiltration Channel:</span>
+            <span className="text-cyan-300 font-bold">Controlled Receiver (:8000)</span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-400 text-[10px] block">Data Prevention Rate:</span>
+            <span className="text-emerald-400 font-extrabold text-sm">100.0% (0 Bytes Leaked)</span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-400 text-[10px] block">Harvester Process:</span>
+            <span className="text-amber-300 font-bold">PID 5124 (powershell.exe)</span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-400 text-[10px] block">Staged Payload Archive:</span>
+            <span className="text-purple-300 font-bold">exfil_payload_staged.zip</span>
+          </div>
+        </div>
+
+        <div className="pt-2 flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => handleExecute('quarantine_host')}
+            className="px-3.5 py-2 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/40 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <Server className="w-3.5 h-3.5" />
+            <span>Isolate Host WS-ENGINEERING-07</span>
+          </button>
+
+          <button
+            onClick={() => handleExecute('revoke_session')}
+            className="px-3.5 py-2 rounded-lg bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-500/40 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <UserX className="w-3.5 h-3.5" />
+            <span>Revoke david.webb Tokens</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (onNavigate) onNavigate('/tracegraph');
+            }}
+            className="px-3.5 py-2 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-500/40 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Inspect GraphX Threat Path</span>
           </button>
         </div>
       </div>

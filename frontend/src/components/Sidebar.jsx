@@ -63,9 +63,8 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
 
       {/* Sidebar Navigation: Docked on PC/Laptop (md+), Drawer on Mobile (<md) */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-64 min-w-[16rem] flex-shrink-0 bg-[#0c1220] border-r border-slate-800 flex flex-col h-screen select-none transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
-        }`}
+        className={`fixed md:static inset-y-0 left-0 z-50 w-64 min-w-[16rem] flex-shrink-0 bg-[#0c1220] border-r border-slate-800 flex flex-col h-screen select-none transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+          }`}
       >
         {/* Brand Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
@@ -94,9 +93,8 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
         {/* Quick Status Bar */}
         <div className="px-4 py-2.5 border-b border-slate-800/80 bg-slate-900/40 flex items-center justify-between text-xs">
           <span className="text-slate-400 text-[11px]">System Status:</span>
-          <span className={`flex items-center gap-1.5 font-semibold text-[11px] ${
-            isThreat ? 'text-red-400' : 'text-emerald-400'
-          }`}>
+          <span className={`flex items-center gap-1.5 font-semibold text-[11px] ${isThreat ? 'text-red-400' : 'text-emerald-400'
+            }`}>
             <span className={`w-2 h-2 rounded-full ${isThreat ? 'bg-red-400 animate-pulse' : 'bg-emerald-400'}`} />
             {isThreat ? 'Threat Active' : 'Protected'}
           </span>
@@ -109,11 +107,10 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
               startDemo();
               if (onClose) onClose();
             }}
-            className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-              demoActive
-                ? 'bg-purple-600 text-white shadow-md animate-pulse'
-                : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-            }`}
+            className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${demoActive
+              ? 'bg-purple-600 text-white shadow-md animate-pulse'
+              : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+              }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
             <span>{demoActive ? 'Demo Active' : 'Run Demo Attack'}</span>
@@ -135,11 +132,10 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.path)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    isActive
-                      ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-                  }`}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${isActive
+                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                    }`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
                     <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
@@ -164,11 +160,10 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.path)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                    isActive
-                      ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                  }`}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${isActive
+                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                    }`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
                     <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : 'text-slate-500'}`} />

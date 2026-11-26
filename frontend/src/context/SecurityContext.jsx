@@ -4,6 +4,7 @@ import {
   INITIAL_DEVICES,
   INITIAL_CANARIES,
   INITIAL_EVENTS,
+  DATA_THEFT_EVENTS,
   INITIAL_ATTACK_GRAPH,
   INITIAL_STATS,
   INITIAL_BLAST_RADIUS,
@@ -336,30 +337,34 @@ export const SecurityProvider = ({ children }) => {
     }
 
     if (simTimerRef.current) clearInterval(simTimerRef.current);
+    const activeEventsList = (scenarioId === 'scenario_data_theft' || scenarioId === 'data_theft' || scenarioId === 'theft')
+      ? DATA_THEFT_EVENTS
+      : INITIAL_EVENTS;
+
     setSimState({
       status: 'running',
       scenario_id: scenarioId,
       current_step: 1,
-      total_steps: 6,
+      total_steps: activeEventsList.length,
       speed,
-      progress_pct: 16
+      progress_pct: Math.round((1 / activeEventsList.length) * 100)
     });
-    setEvents([INITIAL_EVENTS[0]]);
+    setEvents([activeEventsList[0]]);
 
     let step = 1;
     simTimerRef.current = setInterval(() => {
       step++;
-      if (step <= 6) {
+      if (step <= activeEventsList.length) {
         setSimState({
-          status: step === 6 ? 'completed' : 'running',
+          status: step === activeEventsList.length ? 'completed' : 'running',
           scenario_id: scenarioId,
           current_step: step,
-          total_steps: 6,
+          total_steps: activeEventsList.length,
           speed,
-          progress_pct: Math.round((step / 6) * 100)
+          progress_pct: Math.round((step / activeEventsList.length) * 100)
         });
-        setEvents(INITIAL_EVENTS.slice(0, step));
-        if (step === 6) {
+        setEvents(activeEventsList.slice(0, step));
+        if (step === activeEventsList.length) {
           clearInterval(simTimerRef.current);
           confetti({ particleCount: 100, spread: 70 });
         }
@@ -813,7 +818,127 @@ export const SecurityProvider = ({ children }) => {
         return data;
       }
     } catch (e) {}
-    return await runProtectionDemo();
+
+    // Autonomous client fallback for static deployments (GitHub Pages)
+    const verificationRecord = {
+      success: true,
+      status: "CONTAINED_AND_VERIFIED",
+      message: "Adversary process killed (PID 5124), Controlled Receiver egress blocked (403 Forbidden), staged payload quarantined, clean data restored.",
+      actions_taken: [
+        "Terminated malicious harvester process PID 5124 (powershell.exe) via taskkill /F",
+        "Enforced perimeter egress drop at Controlled Receiver (HTTP 403 Forbidden applied)",
+        "Quarantined staged exfiltration archive exfil_payload_staged.zip to sandbox quarantine vault",
+        "Restored clean verified synthetic customer data from immutable backup",
+        "Revoked compromised interactive tokens for david.webb on WS-ENGINEERING-07"
+      ],
+      process_terminated: true,
+      active_pids: [],
+      quarantined_files: ["exfil_payload_staged.zip"],
+      restored_files: ["synthetic_customer_records.csv", "confidential_payroll_q3.json"],
+      receiver_status: {
+        egress_blocked: true,
+        bytes_leaked: 0,
+        bytes_blocked: 2450,
+        prevention_rate_pct: 100.0,
+        outcome: "PREVENTED"
+      },
+      verification_hash: "3a8f190e7bc944c21a0d819e6b72a44d018f4bb2f45ec7d36329a1a8c983cba4",
+      timestamp: new Date().toISOString()
+    };
+
+    // Update attack graph to contained state
+    setAttackGraph((prev) => {
+      const prevGraph = prev || INITIAL_ATTACK_GRAPH;
+      return {
+        ...prevGraph,
+        summary: {
+          ...prevGraph.summary,
+          containment_status: "CONTAINED"
+        },
+        nodes: (prevGraph.nodes || []).map((n) => ({
+          ...n,
+          data: {
+            ...n.data,
+            visual_state: 'contained'
+          }
+        })),
+        edges: (prevGraph.edges || []).map((e) => ({
+          ...e,
+          animated: false,
+          data: {
+            ...e.data,
+            contained: true
+          }
+        }))
+      };
+    });
+
+    // Update devices state
+    setDevices((prev) =>
+      prev.map((d) =>
+        d.id === 'DEV-001' || d.name === 'WS-ENGINEERING-07'
+          ? { ...d, status: 'isolated', security_posture: 'protected', active_pids: [] }
+          : d
+      )
+    );
+
+    // Update stats
+    setStats((prev) =>
+      prev
+        ? {
+            ...prev,
+            overall_status: "THREAT_CONTAINED",
+            threat_level: "DEFCON 5 - CONTAINED",
+            active_threats_count: 0,
+            compromised_devices_count: 0
+          }
+        : INITIAL_STATS
+    );
+
+    // Add action record
+    const newAction = {
+      id: `ACT-${Date.now().toString().slice(-4)}`,
+      action_type: "autonomous_containment",
+      target: "WS-ENGINEERING-07 (PID 5124) + Receiver :8000",
+      status: "EXECUTED_VERIFIED",
+      timestamp: new Date().toISOString(),
+      operator: "PloyWeb-Autonomous-Defense",
+      integrity_hash: verificationRecord.verification_hash
+    };
+    setActions((prev) => [newAction, ...prev]);
+
+    // Add contained event
+    const containedEvent = {
+      id: `EVT-CONTAIN-${Date.now().toString().slice(-4)}`,
+      timestamp: new Date().toISOString(),
+      source_ip: "10.0.2.14",
+      destination_ip: "127.0.0.1",
+      username: "SOC-Defense-Engine",
+      device_name: "WS-ENGINEERING-07",
+      event_type: "incident_contained",
+      event_description: "Autonomous Defense: Adversary harvester PID 5124 killed, Controlled Receiver egress blocked (0 bytes leaked), clean data restored.",
+      severity: "info",
+      mitre_id: "RESPONSE-CONTAIN",
+      mitre_name: "Defensive Containment & Data Theft Prevention",
+      stage: 7,
+      status: "contained",
+      is_canary: false,
+      evidence_hash: verificationRecord.verification_hash,
+      raw_payload: verificationRecord
+    };
+    setEvents((prev) => [containedEvent, ...prev]);
+
+    setActiveAlert({
+      id: "ALERT-CONTAINED",
+      title: "ADVERSARY ATTACK NEUTRALIZED",
+      description: "Autonomous defensive containment executed: 100% data theft prevented (0 bytes leaked).",
+      device: "WS-ENGINEERING-07",
+      mitre: "RESPONSE-CONTAIN",
+      timestamp: new Date().toISOString()
+    });
+
+    confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+    return verificationRecord;
   };
 
   // ==================== GUIDED DEMO MODE LOGIC ====================

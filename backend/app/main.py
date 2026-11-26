@@ -15,6 +15,7 @@ from .canary import list_canaries, add_canary, trigger_canary_trip, reset_all_ca
 from .response_actions import execute_simulated_action, get_action_history
 from .evidence import verify_ledger, simulate_tamper_record, restore_tampered_record
 from .report import generate_investigation_report
+from .receiver import router as receiver_router, receiver_state
 
 app = FastAPI(
     title="PloyWeb – Autonomous Cyber Investigation & Attack Graph Reconstruction API",
@@ -30,6 +31,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(receiver_router)
 
 # WebSocket Connection Manager
 class ConnectionManager:
@@ -548,6 +551,11 @@ async def trigger_agent_remediation(payload: Dict[str, Any] = None):
     for dev in db.devices.find():
         db.devices.update_one({"id": dev["id"]}, {"$set": {"security_posture": "protected", "status": "connected"}})
 
+    # Activate receiver containment & egress drop
+    receiver_state.block_mode = True
+    receiver_state.containment_active = True
+    rx_stats = receiver_state.get_stats()
+
     action = {
         "id": f"ACT-{datetime.utcnow().strftime('%M%S')}",
         "action_type": "terminate_process_and_quarantine",
@@ -555,8 +563,8 @@ async def trigger_agent_remediation(payload: Dict[str, Any] = None):
         "status": "EXECUTED_VERIFIED",
         "timestamp": datetime.utcnow().isoformat(),
         "operator": "Autonomous-Incident-Response",
-        "details": f"Terminated PIDs: {killed_pids}. Quarantined sandbox artifacts. Decoy restored.",
-        "mitigation_impact": "Threat Completely Contained. Host Verified Clean."
+        "details": f"Terminated PIDs: {killed_pids}. Quarantined sandbox artifacts. Decoy restored. Receiver exfil socket blocked.",
+        "mitigation_impact": "Threat Completely Contained. Host Verified Clean. Data Leakage Prevented."
     }
     db.response_actions.insert_one(action)
 
@@ -585,7 +593,8 @@ async def trigger_agent_remediation(payload: Dict[str, Any] = None):
         "status": "CONTAINED",
         "verification_passed": True,
         "terminated_pids": killed_pids,
-        "action": action
+        "action": action,
+        "receiver_stats": rx_stats
     }
 
 # ==================== DEVICE MANAGEMENT ENDPOINTS ====================

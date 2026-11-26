@@ -169,8 +169,13 @@ def build_attack_graph() -> Dict[str, Any]:
             node_registry[process_node_id]["stage"] = max(node_registry[process_node_id]["stage"], stage)
             node_registry[process_node_id]["event_references"].append(evt_id)
 
-        # 5. File / Canary Node
+        # 5. File / Canary / Synthetic Target Node
         canary_node_id = None
+        file_node_id = None
+        staging_node_id = None
+        receiver_node_id = None
+        action_node_id = None
+
         if is_canary or canary_file:
             target_canary = canary_file or "financial_report_demo.txt"
             canary_node_id = f"node-canary-{target_canary}"
@@ -185,20 +190,68 @@ def build_attack_graph() -> Dict[str, Any]:
             node_registry[canary_node_id]["stage"] = max(node_registry[canary_node_id]["stage"], stage)
             node_registry[canary_node_id]["event_references"].append(evt_id)
 
-        # 6. Network C2 Node
-        c2_node_id = None
-        if "exfiltration" in evt_type or "c2" in evt_type or stage == 5:
-            dest_host = raw_payload.get("destination_domain") or raw_payload.get("dest_ip") or "adverse-egress.net:443"
-            c2_node_id = f"node-c2-{dest_host}"
-            register_node(c2_node_id, f"C2 Socket: {dest_host}", "network", "critical", {
-                "destination": dest_host,
-                "protocol": raw_payload.get("protocol", "TLS Encrypted HTTPS:443"),
-                "bytes": raw_payload.get("bytes_sent", 4194304)
+        # Synthetic sensitive file node
+        target_files = raw_payload.get("files_discovered") or raw_payload.get("files_accessed")
+        if target_files:
+            fn = target_files[0] if isinstance(target_files, list) else str(target_files)
+            file_node_id = f"node-file-{fn}"
+            register_node(file_node_id, f"Target File: {fn}", "file", "high", {
+                "file_name": fn,
+                "classification": "Synthetic PII / Financial Data",
+                "sha256": raw_payload.get("sha256", "e4d2...synthetic"),
+                "bytes": raw_payload.get("bytes_collected", 1420)
             })
-            if is_contained_globally:
-                node_registry[c2_node_id]["visual_state"] = "contained"
+            node_registry[file_node_id]["stage"] = max(node_registry[file_node_id]["stage"], stage)
+            node_registry[file_node_id]["event_references"].append(evt_id)
+
+        # Staged archive node
+        staged_archive = raw_payload.get("archive_path")
+        if staged_archive or evt_type == "data_staged":
+            archive_name = "exfil_payload_staged.zip"
+            staging_node_id = f"node-staging-{archive_name}"
+            register_node(staging_node_id, f"Staging Archive: {archive_name}", "file", "high", {
+                "archive": archive_name,
+                "path": "test_sandbox\\staging",
+                "size_bytes": raw_payload.get("archive_size", 2450),
+                "sha256": raw_payload.get("sha256", "8f2b...archive")
+            })
+            node_registry[staging_node_id]["stage"] = max(node_registry[staging_node_id]["stage"], stage)
+            node_registry[staging_node_id]["event_references"].append(evt_id)
+
+        # 6. Controlled Receiver Node / Network C2
+        c2_node_id = None
+        if "exfiltration" in evt_type or "c2" in evt_type or raw_payload.get("destination_receiver") or stage in [5, 6]:
+            dest_host = raw_payload.get("destination_receiver") or raw_payload.get("destination_domain") or raw_payload.get("dest_ip") or "adverse-egress.net:443"
+            is_receiver = "receiver" in dest_host.lower() or "8000" in dest_host
+            c2_node_id = f"node-receiver-{dest_host}" if is_receiver else f"node-c2-{dest_host}"
+            receiver_node_id = c2_node_id
+            
+            node_label = "Controlled Receiver (API:8000)" if is_receiver else f"C2 Socket: {dest_host}"
+            vis_state = "blocked" if (evt_type == "exfiltration_blocked" or is_contained_globally) else "malicious-simulation"
+
+            register_node(c2_node_id, node_label, "network", "critical", {
+                "destination": dest_host,
+                "protocol": raw_payload.get("protocol", "HTTP/1.1 POST" if is_receiver else "TLS Encrypted HTTPS:443"),
+                "bytes_attempted": raw_payload.get("bytes_attempted", 2450),
+                "bytes_received": 0 if (evt_type == "exfiltration_blocked" or is_contained_globally) else raw_payload.get("bytes_transferred", 2450),
+                "is_controlled_receiver": is_receiver,
+                "status": "BLOCKED_PREVENTED" if (evt_type == "exfiltration_blocked" or is_contained_globally) else "LISTENING"
+            })
+            node_registry[c2_node_id]["visual_state"] = vis_state
             node_registry[c2_node_id]["stage"] = max(node_registry[c2_node_id]["stage"], stage)
             node_registry[c2_node_id]["event_references"].append(evt_id)
+
+        # 7. Defensive Action Node
+        if evt_type in ["exfiltration_blocked", "incident_contained"] or is_contained_globally:
+            action_node_id = "node-action-defense-contain"
+            register_node(action_node_id, "Defensive Response: Contained", "account", "info", {
+                "action": "Taskkill PID + Receiver Firewall Drop + Decoy Restored",
+                "verified": True,
+                "operator": "PloyWeb Autonomous SecOps"
+            })
+            node_registry[action_node_id]["visual_state"] = "contained"
+            node_registry[action_node_id]["stage"] = max(node_registry[action_node_id]["stage"], stage)
+            node_registry[action_node_id]["event_references"].append(evt_id)
 
         # ==================== DYNAMIC GRAPHX EDGE SYNTHESIS ====================
         edge_src_id = None
@@ -212,23 +265,43 @@ def build_attack_graph() -> Dict[str, Any]:
         elif evt_type in ["suspicious_process_spawn", "privilege_escalation"] or stage == 2:
             edge_src_id = account_node_id or device_node_id
             edge_dst_id = process_node_id or "node-user-SYSTEM"
-            edge_label = f"Stage 2: PrivEsc Token ({evt.get('mitre_id', 'T1068')})"
-        elif evt_type == "lateral_movement" or stage == 3:
+            edge_label = f"Stage 2: Process Spawn ({evt.get('mitre_id', 'T1059.001')})"
+        elif evt_type == "file_discovery" or stage == 3:
+            edge_src_id = process_node_id or device_node_id
+            edge_dst_id = file_node_id or device_node_id
+            edge_label = f"Stage 3: File Discovery ({evt.get('mitre_id', 'T1083')})"
+        elif evt_type == "data_collection" or stage == 4:
+            edge_src_id = file_node_id or canary_node_id or device_node_id
+            edge_dst_id = process_node_id or device_node_id
+            edge_label = f"Stage 4: PII Data Harvest ({evt.get('mitre_id', 'T1005')})"
+        elif evt_type == "data_staged" or stage == 5:
+            edge_src_id = process_node_id or device_node_id
+            edge_dst_id = staging_node_id or device_node_id
+            edge_label = f"Stage 5: Archive Staging ({evt.get('mitre_id', 'T1074.001')})"
+        elif evt_type == "exfiltration_attempt" or stage == 6:
+            edge_src_id = staging_node_id or process_node_id or device_node_id
+            edge_dst_id = receiver_node_id or c2_node_id or attacker_node_id
+            edge_label = f"Stage 6: Exfil to Receiver ({evt.get('mitre_id', 'T1048')})"
+        elif evt_type == "exfiltration_blocked" or stage == 7:
+            edge_src_id = action_node_id or device_node_id
+            edge_dst_id = receiver_node_id or c2_node_id
+            edge_label = f"Stage 7: Exfil BLOCKED ({evt.get('mitre_id', 'RESPONSE-CONTAIN')})"
+        elif evt_type == "incident_contained" or stage == 8:
+            edge_src_id = action_node_id or device_node_id
+            edge_dst_id = device_node_id
+            edge_label = f"Stage 8: Host Contained & Verified ({evt.get('mitre_id', 'VERIFIED-CLEAN')})"
+        elif evt_type == "lateral_movement":
             edge_src_id = f"node-device-{patient_zero}" if patient_zero else account_node_id
             edge_dst_id = device_node_id
-            edge_label = f"Stage 3: WinRM Lateral Pivot ({evt.get('mitre_id', 'T1021')})"
-        elif evt_type == "canary_access" or stage == 4:
+            edge_label = f"Lateral Pivot ({evt.get('mitre_id', 'T1021')})"
+        elif evt_type == "canary_access":
             edge_src_id = device_node_id
             edge_dst_id = canary_node_id
-            edge_label = f"Stage 4: Canary Trap Breach ({evt.get('mitre_id', 'T1005')})"
-        elif evt_type in ["file_exfiltration", "c2_beacon"] or stage == 5:
+            edge_label = f"Canary Trap Breach ({evt.get('mitre_id', 'T1005')})"
+        elif evt_type in ["file_exfiltration", "c2_beacon"]:
             edge_src_id = device_node_id
             edge_dst_id = c2_node_id or attacker_node_id
-            edge_label = f"Stage 5: C2 Encrypted Egress ({evt.get('mitre_id', 'T1048')})"
-        elif stage == 6:
-            edge_src_id = "node-user-SYSTEM"
-            edge_dst_id = device_node_id
-            edge_label = f"Stage 6: Persistent Daemon ({evt.get('mitre_id', 'T1543')})"
+            edge_label = f"C2 Encrypted Egress ({evt.get('mitre_id', 'T1048')})"
         else:
             edge_src_id = attacker_node_id or device_node_id
             edge_dst_id = device_node_id
@@ -283,15 +356,18 @@ def build_attack_graph() -> Dict[str, Any]:
     #   Tier 2: Endpoints / Hosts (y = 330)
     #   Tier 3: Active Processes & Tasks (y = 470)
     #   Tier 4: File Storage & Canary Decoys (y = 610)
-    stage_x_map = {1: 80, 2: 360, 3: 660, 4: 960, 5: 1260, 6: 1560}
+    stage_x_map = {1: 80, 2: 300, 3: 520, 4: 740, 5: 960, 6: 1180, 7: 1400, 8: 1620}
     type_y_map = {
         "attacker": 60,
+        "receiver": 60,
         "network": 70,
         "account": 200,
         "device": 340,
         "process": 480,
         "file": 620,
-        "canary": 620
+        "canary": 620,
+        "staging": 620,
+        "action": 340
     }
 
     tier_counts: Dict[tuple, int] = {}

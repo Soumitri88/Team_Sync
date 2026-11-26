@@ -483,6 +483,130 @@ SCENARIOS["scenario_file"] = {
     ]
 }
 
+SCENARIOS["scenario_data_theft"] = {
+    "id": "scenario_data_theft",
+    "title": "Adversary Data Theft Emulation & Prevention (MITRE ATT&CK)",
+    "device_type": "windows",
+    "target_device": "WS-ENGINEERING-07",
+    "description": "8-Stage isolated adversary data theft emulation: Initial Access -> Process Execution -> File Discovery -> Synthetic PII Collection -> Archive Staging -> Exfiltration Attempt -> Autonomous Containment -> Endpoint Verification.",
+    "mitre_id": "MITRE-DATA-THEFT",
+    "mitre_name": "Data Theft & Exfiltration Prevention",
+    "events": [
+        {
+            "offset_sec": 0,
+            "source_ip": "198.51.100.44",
+            "destination_ip": "10.0.2.14",
+            "username": "david.webb",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "suspicious_login",
+            "event_description": "Stage 1: Initial Access - Compromised user session 'david.webb' initiated from external proxy 198.51.100.44.",
+            "severity": "high",
+            "mitre_id": "T1078",
+            "mitre_name": "Valid Accounts: Compromised Credentials",
+            "stage": 1,
+            "raw_payload": {"session_type": "Interactive_RDP", "origin_country": "Anonymous VPN Proxy", "auth_status": "SUCCESS"}
+        },
+        {
+            "offset_sec": 2,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "10.0.2.14",
+            "username": "david.webb",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "suspicious_process_spawn",
+            "event_description": "Stage 2: Execution - Harvester subprocess spawned under PID 5124 with tracked parent PID 3892.",
+            "severity": "high",
+            "mitre_id": "T1059.001",
+            "mitre_name": "Command and Scripting Interpreter: PowerShell/Python",
+            "stage": 2,
+            "raw_payload": {"process_id": 5124, "parent_pid": 3892, "command_line": "powershell.exe -ExecutionPolicy Bypass -File .\\harvest_test.ps1", "process_name": "powershell.exe", "integrity": "Medium"}
+        },
+        {
+            "offset_sec": 4,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "10.0.2.14",
+            "username": "david.webb",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "file_discovery",
+            "event_description": "Stage 3: Discovery - Monitored test directory scanned. Located target synthetic customer PII files.",
+            "severity": "medium",
+            "mitre_id": "T1083",
+            "mitre_name": "File and Directory Discovery",
+            "stage": 3,
+            "raw_payload": {"scanned_path": "test_sandbox\\staging", "files_discovered": ["synthetic_customer_records.csv", "confidential_payroll_q3.json"], "process_id": 5124}
+        },
+        {
+            "offset_sec": 6,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "10.0.2.14",
+            "username": "david.webb",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "data_collection",
+            "event_description": "Stage 4: Collection - Synthetic customer PII records read into memory by process PID 5124.",
+            "severity": "high",
+            "mitre_id": "T1005",
+            "mitre_name": "Data from Local System: Synthetic Sensitive Data Access",
+            "stage": 4,
+            "raw_payload": {"process_id": 5124, "files_accessed": ["synthetic_customer_records.csv"], "bytes_collected": 1420, "sha256": "4a7d65b21efb3c8a912e7f6d4821a3e9c5f8b7a1234567890abcdef123456789"}
+        },
+        {
+            "offset_sec": 8,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "10.0.2.14",
+            "username": "david.webb",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "data_staged",
+            "event_description": "Stage 5: Staging - Compressed archive 'exfil_payload_staged.zip' generated in sandbox staging folder.",
+            "severity": "high",
+            "mitre_id": "T1074.001",
+            "mitre_name": "Data Staged: Local Staging Archive Created",
+            "stage": 5,
+            "raw_payload": {"archive_path": "test_sandbox\\staging\\exfil_payload_staged.zip", "archive_size": 2450, "sha256": "8f2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b", "process_id": 5124}
+        },
+        {
+            "offset_sec": 10,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "127.0.0.1",
+            "username": "david.webb",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "exfiltration_attempt",
+            "event_description": "Stage 6: Exfiltration Attempt - Outbound HTTP exfiltration initiated to Controlled Receiver (127.0.0.1:8000/api/receiver/upload).",
+            "severity": "critical",
+            "mitre_id": "T1048",
+            "mitre_name": "Exfiltration Over Alternative Protocol: Controlled Test Receiver",
+            "stage": 6,
+            "raw_payload": {"destination_receiver": "http://127.0.0.1:8000/api/receiver/upload", "attempted_file": "exfil_payload_staged.zip", "bytes_attempted": 2450, "process_id": 5124, "protocol": "HTTP/1.1 POST"}
+        },
+        {
+            "offset_sec": 12,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "127.0.0.1",
+            "username": "SOC-Commander",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "exfiltration_blocked",
+            "event_description": "Stage 7: Autonomous Containment - Process PID 5124 terminated via taskkill. Outbound socket blocked at receiver policy.",
+            "severity": "info",
+            "mitre_id": "RESPONSE-CONTAIN",
+            "mitre_name": "Defensive Control: Active Process Termination & Egress Drop",
+            "stage": 7,
+            "raw_payload": {"defense_applied": "TASKKILL + FIREWALL_DROP", "terminated_pid": 5124, "bytes_transferred": 0, "receiver_outcome": "PREVENTED"}
+        },
+        {
+            "offset_sec": 14,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "10.0.2.14",
+            "username": "SOC-Commander",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "incident_contained",
+            "event_description": "Stage 8: Verification & Recovery - Endpoint verified clean. Staged files quarantined. Clean backups restored.",
+            "severity": "info",
+            "mitre_id": "VERIFIED-CLEAN",
+            "mitre_name": "Cryptographic Verification & Host Recovery",
+            "stage": 8,
+            "raw_payload": {"verification_passed": True, "quarantined_files": ["exfil_payload_staged.zip"], "restored_files": ["synthetic_customer_records.csv"], "data_theft_prevention_rate": "100%"}
+        }
+    ]
+}
+
 class SimulationController:
     def __init__(self):
         self.status: str = "idle"  # idle, running, paused, completed, error
