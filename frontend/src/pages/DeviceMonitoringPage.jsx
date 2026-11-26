@@ -216,6 +216,31 @@ export function DeviceMonitoringPage({ onInspectEvidence }) {
         </div>
       </div>
 
+      {/* Windows Endpoint Agent Quick Connect Banner */}
+      <div className="p-4 rounded-2xl bg-slate-900/90 border border-cyan-500/30 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs font-mono shadow-md">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-cyan-950 border border-cyan-500/40 text-cyan-400 flex-shrink-0">
+            <Terminal className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-white uppercase tracking-wide">Windows Endpoint Agent Connection</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 text-[10px] border border-emerald-500/30">
+                Ready for Hackathon Judging
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              To connect a physical Windows computer to PloyWeb: run <code className="text-cyan-300">agent\start_agent.bat</code> or <code className="text-cyan-300">python agent\ployweb_agent.py</code>. The agent establishes live heartbeat telemetry into GraphX.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="px-3 py-1.5 rounded-xl bg-black/60 border border-white/10 text-[11px] text-cyan-300 font-mono">
+            Host: WS-ENGINEERING-07
+          </span>
+        </div>
+      </div>
+
       {/* Non-destructive Compliance Disclaimer Notice */}
       <div className="p-3.5 rounded-lg bg-blue-950/40 border border-blue-500/30 text-blue-200 text-xs flex items-start gap-2.5">
         <Info className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />

@@ -28,6 +28,14 @@ export const SecurityProvider = ({ children }) => {
   const [blastRadius, setBlastRadius] = useState(INITIAL_BLAST_RADIUS);
   const [actions, setActions] = useState(INITIAL_ACTIONS);
   const [devices, setDevices] = useState(INITIAL_DEVICES);
+  const [agentStatus, setAgentStatus] = useState({
+    connected: false,
+    hostname: 'WS-ENGINEERING-07',
+    ip: '10.0.2.14',
+    os: 'Windows 11 Enterprise (23H2)',
+    active_pids: [],
+    last_heartbeat: new Date().toISOString()
+  });
   const [evidenceLedger, setEvidenceLedger] = useState({
     total_records: INITIAL_EVENTS.length,
     records: INITIAL_EVENTS
@@ -40,6 +48,7 @@ export const SecurityProvider = ({ children }) => {
   const [demoActive, setDemoActive] = useState(false);
   const [demoStep, setDemoStep] = useState(1);
   const [demoAutoPlay, setDemoAutoPlay] = useState(false);
+  const [isJudgeModalOpen, setIsJudgeModalOpen] = useState(false);
 
   const wsRef = useRef(null);
   const simTimerRef = useRef(null);
@@ -155,6 +164,18 @@ export const SecurityProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchAgentStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/agent/status');
+      if (res.ok) {
+        const data = await res.json();
+        setAgentStatus(data);
+      }
+    } catch (e) {
+      // Backend offline: keep current state
+    }
+  }, []);
+
   const refreshAll = useCallback(async () => {
     await Promise.all([
       fetchDashboardStats(),
@@ -165,7 +186,8 @@ export const SecurityProvider = ({ children }) => {
       fetchActions(),
       fetchEvidenceLedger(),
       fetchSimulationState(),
-      fetchDevices()
+      fetchDevices(),
+      fetchAgentStatus()
     ]);
   }, [
     fetchDashboardStats,
@@ -176,7 +198,8 @@ export const SecurityProvider = ({ children }) => {
     fetchActions,
     fetchEvidenceLedger,
     fetchSimulationState,
-    fetchDevices
+    fetchDevices,
+    fetchAgentStatus
   ]);
 
   // Initial mount load
@@ -248,6 +271,23 @@ export const SecurityProvider = ({ children }) => {
               setActions((prev) => [msg.action, ...prev]);
               fetchDashboardStats();
               fetchBlastRadius();
+            } else if (msg.type === 'AGENT_CONNECTED') {
+              fetchDevices();
+              fetchAgentStatus();
+            } else if (msg.type === 'AGENT_HEARTBEAT') {
+              setAgentStatus((prev) => ({
+                ...prev,
+                connected: true,
+                hostname: msg.hostname || prev.hostname,
+                active_pids: msg.active_pids || [],
+                last_heartbeat: msg.timestamp
+              }));
+            } else if (msg.type === 'REMEDIATION_VERIFIED') {
+              if (msg.action) setActions((prev) => [msg.action, ...prev]);
+              fetchAttackGraph();
+              fetchDashboardStats();
+              fetchDevices();
+              fetchAgentStatus();
             } else if (msg.type === 'RESET_ALL' || msg.type === 'DEMO_RESEEDED') {
               refreshAll();
             }
@@ -748,6 +788,34 @@ export const SecurityProvider = ({ children }) => {
     return { success: true, message: "Host WS-ENGINEERING-07 isolated and sessions revoked." };
   };
 
+  const triggerLiveAttackSimulation = async (scenario = 'multistage') => {
+    try {
+      const res = await fetch('/api/agent/trigger-simulation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario })
+      });
+      if (res.ok) {
+        await startSimulation(scenario, 1.2);
+        return;
+      }
+    } catch (e) {}
+    await startSimulation(scenario, 1.2);
+  };
+
+  const executeRemediationAndVerify = async () => {
+    try {
+      const res = await fetch('/api/agent/remediate', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        await refreshAll();
+        confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+        return data;
+      }
+    } catch (e) {}
+    return await runProtectionDemo();
+  };
+
   // ==================== GUIDED DEMO MODE LOGIC ====================
   // 9 Required Steps:
   // 1. Suspicious login detected
@@ -880,6 +948,10 @@ export const SecurityProvider = ({ children }) => {
         blastRadius,
         actions,
         devices,
+        agentStatus,
+        fetchAgentStatus,
+        triggerLiveAttackSimulation,
+        executeRemediationAndVerify,
         evidenceLedger,
         ledgerAudit,
         loading,
@@ -905,6 +977,9 @@ export const SecurityProvider = ({ children }) => {
         verifyLedgerIntegrity,
         tamperEvidence,
         restoreEvidence,
+        // Live Judge Demo Modal
+        isJudgeModalOpen,
+        setIsJudgeModalOpen,
         // Demo
         demoActive,
         demoStep,

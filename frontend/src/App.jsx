@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { DemoTourBar } from './components/DemoTourBar';
 import { EvidenceModal } from './components/EvidenceModal';
+import { LiveJudgeDemoModal } from './components/LiveJudgeDemoModal';
 import { LoginPage } from './pages/LoginPage';
 import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -17,9 +18,11 @@ import { EvidenceLedgerPage } from './pages/EvidenceLedgerPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useAuth } from './context/AuthContext';
+import { useSecurity } from './context/SecurityContext';
 
 export function App() {
   const { isAuthenticated } = useAuth();
+  const { isJudgeModalOpen, setIsJudgeModalOpen } = useSecurity();
   const [currentPath, setCurrentPath] = useState('/');
   const [inspectedItem, setInspectedItem] = useState(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -105,6 +108,12 @@ export function App() {
           onClose={() => setInspectedItem(null)}
         />
       )}
+
+      {/* Live 8-Stage Interactive Judge Demo Modal */}
+      <LiveJudgeDemoModal
+        isOpen={isJudgeModalOpen}
+        onClose={() => setIsJudgeModalOpen(false)}
+      />
     </div>
   );
 }

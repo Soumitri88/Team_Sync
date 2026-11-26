@@ -414,6 +414,75 @@ SCENARIOS = {
 # Alias for backwards compatibility
 SCENARIOS["multi_stage"] = SCENARIOS["windows_pc"]
 
+# Controlled Test Scenarios for Demonstration & Endpoint Agent
+SCENARIOS["scenario_process"] = {
+    "id": "scenario_process",
+    "title": "Scenario A: Suspicious Process Spawning",
+    "device_type": "windows",
+    "target_device": "WS-ENGINEERING-07",
+    "description": "Benign PowerShell & cmd execution pattern in isolated test environment.",
+    "mitre_id": "T1059",
+    "mitre_name": "Command and Scripting Interpreter: PowerShell",
+    "events": [
+        {
+            "offset_sec": 0,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "10.0.2.14",
+            "username": "david.webb",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "process_execution",
+            "event_description": "Controlled Test: Benign test command spawned under PID tracking.",
+            "severity": "medium",
+            "mitre_id": "T1059.001",
+            "mitre_name": "PowerShell Command Execution",
+            "stage": 1,
+            "raw_payload": {"process": "powershell.exe -NoProfile -Command Write-Host 'Harmless probe'", "pid": 4812}
+        },
+        {
+            "offset_sec": 3,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "10.0.2.14",
+            "username": "david.webb",
+            "device_name": "WS-ENGINEERING-07",
+            "event_type": "privilege_escalation",
+            "event_description": "Controlled Test: Access token query on local thread.",
+            "severity": "high",
+            "mitre_id": "T1134",
+            "mitre_name": "Access Token Manipulation",
+            "stage": 2,
+            "raw_payload": {"privilege_requested": "SeDebugPrivilege", "process": "powershell.exe"}
+        }
+    ]
+}
+
+SCENARIOS["scenario_file"] = {
+    "id": "scenario_file",
+    "title": "Scenario B: Canary File Modification",
+    "device_type": "windows",
+    "target_device": "WS-ENGINEERING-07",
+    "description": "Safe file write and canary tripwire simulation in dedicated test folder.",
+    "mitre_id": "T1005",
+    "mitre_name": "Data from Local System: Decoy Canary Breach",
+    "events": [
+        {
+            "offset_sec": 0,
+            "source_ip": "10.0.2.14",
+            "destination_ip": "10.0.3.11",
+            "username": "SYSTEM",
+            "device_name": "SRV-FINANCE-01",
+            "event_type": "canary_access",
+            "event_description": "Decoy Trap Breached: Canary tripwire accessed in sandbox.",
+            "severity": "critical",
+            "mitre_id": "T1005",
+            "mitre_name": "Data from Local System: Decoy Canary Breach",
+            "stage": 1,
+            "is_canary": True,
+            "canary_file": "financial_report_demo.txt",
+            "raw_payload": {"path": "test_sandbox/files/financial_report_demo.txt", "trigger": "CANARY_OPEN_READ"}
+        }
+    ]
+}
+
 class SimulationController:
     def __init__(self):
         self.status: str = "idle"  # idle, running, paused, completed, error

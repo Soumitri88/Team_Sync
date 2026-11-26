@@ -173,7 +173,9 @@ export const ReportsPage = () => {
     window.print();
   };
 
-  if (loading) {
+  const activeReport = report || INITIAL_REPORT;
+
+  if (loading && !report) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-center font-mono">
         <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mb-3" />
@@ -182,9 +184,7 @@ export const ReportsPage = () => {
     );
   }
 
-  if (!report) {
-    return <div className="text-slate-400 text-xs font-mono">Unable to load incident report.</div>;
-  }
+  const reportData = activeReport;
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-16 max-w-5xl mx-auto">

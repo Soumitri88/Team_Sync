@@ -207,30 +207,36 @@ export const INITIAL_EVENTS = [
 ];
 
 export const INITIAL_ATTACK_GRAPH = {
+  engine: "PloyWeb GraphX Autonomous Reconstruction Engine v2.4",
   summary: {
-    total_nodes: 7,
-    total_edges: 7,
+    total_nodes: 8,
+    total_edges: 8,
     attack_stages: 6,
     patient_zero: "WS-ENGINEERING-07",
+    containment_status: "ACTIVE_INTRUSION",
     critical_path: [
       "node-attacker-198.51.100.44",
       "node-user-david.webb",
       "node-device-WS-ENGINEERING-07",
+      "node-proc-4812",
       "node-user-SYSTEM",
       "node-device-SRV-FINANCE-01",
-      "node-canary-financial_report_demo.txt"
+      "node-canary-financial_report_demo.txt",
+      "node-attacker-adverse-egress.net"
     ]
   },
   nodes: [
     {
       id: "node-attacker-198.51.100.44",
       type: "custom",
-      position: { x: 50, y: 150 },
+      position: { x: 80, y: 60 },
       data: {
         id: "node-attacker-198.51.100.44",
         label: "Adversary [198.51.100.44]",
         type: "attacker",
         severity: "critical",
+        visual_state: "malicious-simulation",
+        stage: 1,
         is_critical_path: true,
         critical_path: true,
         metadata: { ip: "198.51.100.44", threat_actor: "APT-SIM-409", reputation: "Malicious External Origin" }
@@ -239,12 +245,14 @@ export const INITIAL_ATTACK_GRAPH = {
     {
       id: "node-user-david.webb",
       type: "custom",
-      position: { x: 300, y: 100 },
+      position: { x: 360, y: 190 },
       data: {
         id: "node-user-david.webb",
         label: "User: david.webb",
         type: "account",
         severity: "high",
+        visual_state: "suspicious",
+        stage: 1,
         is_critical_path: true,
         critical_path: true,
         metadata: { username: "david.webb", role: "Domain Engineer", device_affinity: "WS-ENGINEERING-07" }
@@ -253,26 +261,47 @@ export const INITIAL_ATTACK_GRAPH = {
     {
       id: "node-device-WS-ENGINEERING-07",
       type: "custom",
-      position: { x: 550, y: 150 },
+      position: { x: 660, y: 330 },
       data: {
         id: "node-device-WS-ENGINEERING-07",
         label: "Patient Zero: WS-ENGINEERING-07",
         type: "device",
         severity: "critical",
+        visual_state: "malicious-simulation",
+        stage: 2,
+        is_patient_zero: true,
         is_critical_path: true,
         critical_path: true,
-        metadata: { ip: "10.0.2.14", os: "Windows 11 Enterprise", role: "Workstation (Patient Zero)" }
+        metadata: { ip: "10.0.2.14", os: "Windows 11 Enterprise (23H2)", role: "Workstation (Patient Zero)" }
+      }
+    },
+    {
+      id: "node-proc-4812",
+      type: "custom",
+      position: { x: 660, y: 480 },
+      data: {
+        id: "node-proc-4812",
+        label: "Process: python.exe [PID 4812]",
+        type: "process",
+        severity: "high",
+        visual_state: "suspicious",
+        stage: 2,
+        is_critical_path: true,
+        critical_path: true,
+        metadata: { pid: 4812, process_name: "python.exe", command_line: "python -c \"import time; print('Simulated Probe'); time.sleep(180)\"" }
       }
     },
     {
       id: "node-user-SYSTEM",
       type: "custom",
-      position: { x: 550, y: 320 },
+      position: { x: 660, y: 190 },
       data: {
         id: "node-user-SYSTEM",
         label: "NT AUTHORITY\\SYSTEM",
         type: "account",
         severity: "critical",
+        visual_state: "malicious-simulation",
+        stage: 2,
         is_critical_path: true,
         critical_path: true,
         metadata: { username: "SYSTEM", privilege: "Root/Kernel OS Level", compromised_on: "WS-ENGINEERING-07" }
@@ -281,12 +310,14 @@ export const INITIAL_ATTACK_GRAPH = {
     {
       id: "node-device-SRV-FINANCE-01",
       type: "custom",
-      position: { x: 850, y: 150 },
+      position: { x: 960, y: 330 },
       data: {
         id: "node-device-SRV-FINANCE-01",
         label: "Server: SRV-FINANCE-01",
         type: "device",
         severity: "critical",
+        visual_state: "malicious-simulation",
+        stage: 3,
         is_critical_path: true,
         critical_path: true,
         metadata: { ip: "10.0.3.11", os: "Ubuntu 22.04 LTS", role: "Core Finance Storage" }
@@ -295,12 +326,14 @@ export const INITIAL_ATTACK_GRAPH = {
     {
       id: "node-canary-financial_report_demo.txt",
       type: "custom",
-      position: { x: 1150, y: 100 },
+      position: { x: 960, y: 620 },
       data: {
         id: "node-canary-financial_report_demo.txt",
         label: "Canary: financial_report_demo.txt",
         type: "canary",
         severity: "critical",
+        visual_state: "malicious-simulation",
+        stage: 4,
         is_critical_path: true,
         critical_path: true,
         metadata: { file: "financial_report_demo.txt", path: "/srv/shared/finance/Q3_Audit/", host: "SRV-FINANCE-01" }
@@ -309,15 +342,17 @@ export const INITIAL_ATTACK_GRAPH = {
     {
       id: "node-attacker-adverse-egress.net",
       type: "custom",
-      position: { x: 1150, y: 260 },
+      position: { x: 1260, y: 70 },
       data: {
         id: "node-attacker-adverse-egress.net",
-        label: "C2 Exfiltration Node",
-        type: "attacker",
+        label: "C2 Exfiltration Socket",
+        type: "network",
         severity: "critical",
+        visual_state: "malicious-simulation",
+        stage: 5,
         is_critical_path: true,
         critical_path: true,
-        metadata: { destination: "adverse-egress.net:443", bytes_exfiltrated: "4.2 MB", protocol: "TLS Encrypted" }
+        metadata: { destination: "adverse-egress.net:443", bytes_exfiltrated: "4.2 MB", protocol: "TLS Encrypted HTTPS:443" }
       }
     }
   ],
@@ -326,57 +361,65 @@ export const INITIAL_ATTACK_GRAPH = {
       id: "edge-1",
       source: "node-attacker-198.51.100.44",
       target: "node-user-david.webb",
-      label: "RDP Credential Abuse (T1078)",
+      label: "Stage 1: RDP Credential Abuse (T1078)",
       animated: true,
-      data: { severity: "critical", is_critical_path: true, protocol: "RDP:3389" }
+      data: { severity: "critical", stage: 1, is_critical_path: true, protocol: "RDP:3389" }
     },
     {
       id: "edge-2",
       source: "node-user-david.webb",
       target: "node-device-WS-ENGINEERING-07",
-      label: "Initial Breach Auth",
+      label: "Stage 1: Initial Workstation Breach",
       animated: true,
-      data: { severity: "high", is_critical_path: true, protocol: "Kerberos" }
+      data: { severity: "high", stage: 1, is_critical_path: true, protocol: "Kerberos Auth" }
     },
     {
       id: "edge-3",
       source: "node-device-WS-ENGINEERING-07",
-      target: "node-user-SYSTEM",
-      label: "LSASS Token Impersonation (T1068)",
+      target: "node-proc-4812",
+      label: "Stage 2: Benign Process Spawn (PID 4812)",
       animated: true,
-      data: { severity: "critical", is_critical_path: true, protocol: "Local NamedPipe" }
+      data: { severity: "high", stage: 2, is_critical_path: true, protocol: "Process Creation" }
     },
     {
       id: "edge-4",
-      source: "node-user-SYSTEM",
-      target: "node-device-SRV-FINANCE-01",
-      label: "WinRM Lateral Pivot (T1021)",
+      source: "node-device-WS-ENGINEERING-07",
+      target: "node-user-SYSTEM",
+      label: "Stage 2: Token Impersonation (T1068)",
       animated: true,
-      data: { severity: "critical", is_critical_path: true, protocol: "WinRM:5985" }
+      data: { severity: "critical", stage: 2, is_critical_path: true, protocol: "Local NamedPipe" }
     },
     {
       id: "edge-5",
-      source: "node-device-SRV-FINANCE-01",
-      target: "node-canary-financial_report_demo.txt",
-      label: "Canary Trap Access (DEFCON 1)",
+      source: "node-user-SYSTEM",
+      target: "node-device-SRV-FINANCE-01",
+      label: "Stage 3: WinRM Lateral Pivot (T1021)",
       animated: true,
-      data: { severity: "critical", is_critical_path: true, protocol: "SMB/FileRead" }
+      data: { severity: "critical", stage: 3, is_critical_path: true, protocol: "WinRM:5985" }
     },
     {
       id: "edge-6",
       source: "node-device-SRV-FINANCE-01",
-      target: "node-attacker-adverse-egress.net",
-      label: "Encrypted Data Exfiltration (T1048)",
+      target: "node-canary-financial_report_demo.txt",
+      label: "Stage 4: Canary Trap Breach (DEFCON 1)",
       animated: true,
-      data: { severity: "critical", is_critical_path: true, protocol: "HTTPS:443" }
+      data: { severity: "critical", stage: 4, is_critical_path: true, protocol: "SMB/FileRead" }
     },
     {
       id: "edge-7",
+      source: "node-device-SRV-FINANCE-01",
+      target: "node-attacker-adverse-egress.net",
+      label: "Stage 5: Encrypted Exfiltration (T1048)",
+      animated: true,
+      data: { severity: "critical", stage: 5, is_critical_path: true, protocol: "HTTPS:443" }
+    },
+    {
+      id: "edge-8",
       source: "node-user-SYSTEM",
       target: "node-device-WS-ENGINEERING-07",
-      label: "Persistent Service Daemon (T1543)",
+      label: "Stage 6: Persistent Service Daemon (T1543)",
       animated: true,
-      data: { severity: "critical", is_critical_path: true, protocol: "ServiceController" }
+      data: { severity: "critical", stage: 6, is_critical_path: true, protocol: "ServiceController" }
     }
   ]
 };

@@ -30,7 +30,7 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
     { id: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard },
     { id: 'devices', label: 'Device Monitoring', path: '/devices', icon: Laptop },
     { id: 'simulation', label: 'Attack Simulator', path: '/simulation', icon: Flame },
-    { id: 'tracegraph', label: 'Attack Path (Graph)', path: '/tracegraph', icon: Network },
+    { id: 'tracegraph', label: 'GraphX Attack Path', path: '/tracegraph', icon: Network },
     { id: 'blast-radius', label: 'Impact & Blast Radius', path: '/blast-radius', icon: Activity },
     { id: 'incident-response', label: 'Incident Response', path: '/incident-response', icon: ShieldCheck },
   ];

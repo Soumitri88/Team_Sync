@@ -9,7 +9,7 @@ import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
 
 export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
-  const { stats, refreshAll, demoActive, startDemo, runJudgeDemo, activeAlert, setActiveAlert } = useSecurity();
+  const { stats, refreshAll, demoActive, startDemo, runJudgeDemo, activeAlert, setActiveAlert, setIsJudgeModalOpen } = useSecurity();
   const { user } = useAuth();
   const [time, setTime] = useState(new Date().toUTCString().slice(17, 25));
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -41,7 +41,7 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
       case '/simulation':
         return { full: 'Attack Simulator', short: 'Simulator' };
       case '/tracegraph':
-        return { full: 'Attack Path (TraceGraph)', short: 'Attack Path' };
+        return { full: 'GraphX Attack Reconstruction', short: 'GraphX Path' };
       case '/blast-radius':
         return { full: 'Impact & Blast Radius Analysis', short: 'Blast Radius' };
       case '/incident-response':
@@ -115,20 +115,21 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
 
-          {/* 1-Click Judge Demo Button */}
+          {/* 1-Click Interactive Judge Demo Button */}
           <button
-            onClick={async () => {
-              setIsJudgeRunning(true);
-              await runJudgeDemo();
-              setIsJudgeRunning(false);
-              onNavigate('/tracegraph');
+            onClick={() => {
+              if (setIsJudgeModalOpen) {
+                setIsJudgeModalOpen(true);
+              } else {
+                runJudgeDemo();
+                onNavigate('/tracegraph');
+              }
             }}
-            disabled={isJudgeRunning}
-            title="Ingests out-of-order logs, trips canaries, and reconstructs attack graph for hackathon evaluation"
-            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all border border-purple-400/30 disabled:opacity-50"
+            title="Interactive 8-Stage Cyber Attack Simulation & Autonomous Investigation Walkthrough"
+            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all border border-purple-400/30"
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-200" />
-            <span className="hidden sm:inline">{isJudgeRunning ? 'Reconstructing...' : 'Judge Demo'}</span>
+            <span className="hidden sm:inline">Judge Demo</span>
             <span className="sm:hidden">Judge</span>
           </button>
 

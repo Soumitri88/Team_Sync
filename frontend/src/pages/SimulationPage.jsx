@@ -36,41 +36,41 @@ export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
   const TARGET_PLATFORMS = [
     {
       id: 'windows_pc',
-      name: 'Windows Computer',
+      name: 'Scenario D: Multi-Stage Enterprise Intrusion',
       target: 'WS-ENGINEERING-07',
       os: 'Windows 11 Enterprise (23H2)',
       icon: Laptop,
       desc: 'Enterprise Windows kill-chain: RDP credential abuse -> LSASS token elevation -> WinRM lateral traversal -> Canary breach -> C2 exfiltration -> Service persistence.',
-      badge: '6 Stages',
+      badge: 'Full Kill-Chain',
       severity: 'Critical'
     },
     {
-      id: 'android_mobile',
-      name: 'Android Mobile Device',
-      target: 'MOBILE-PIXEL-08',
-      os: 'Android 14 (Google Pixel 8)',
-      icon: Smartphone,
-      desc: 'Mobile enterprise chain: Sideloaded APK authentication -> Binder token privesc -> Subnet discovery -> Honey-token Canary -> C2 exfiltration -> Boot receiver persistence.',
-      badge: '6 Stages',
-      severity: 'Critical'
-    },
-    {
-      id: 'ios_mobile',
-      name: 'iOS Mobile Device (Simulation Mode)',
-      target: 'IPHONE-CORP-15',
-      os: 'iOS 17.4 (Sandbox Simulation)',
-      icon: Smartphone,
-      desc: 'Safe iOS sandbox simulation: MDM configuration exploit -> WebKit JIT escape -> Container traversal -> Decoy confidential file access -> DNS tunneling exfil -> Kernel flag.',
-      badge: '6 Stages',
+      id: 'scenario_process',
+      name: 'Scenario A: Suspicious Process Activity',
+      target: 'WS-ENGINEERING-07 (PID 4812)',
+      os: 'Windows 11 / Host OS',
+      icon: Terminal,
+      desc: 'Spawns a harmless tagged test background process in the sandbox; captures genuine OS PID, execution command, and sends live telemetry.',
+      badge: 'Process Focus',
       severity: 'High'
     },
     {
+      id: 'scenario_file',
+      name: 'Scenario B: File Access & Canary Breach',
+      target: 'financial_report_demo.txt',
+      os: 'Sandbox Decoy Directory',
+      icon: FileCode,
+      desc: 'Modifies designated test document and trips Canary honey-token; verifies SHA-256 before & after and triggers DEFCON 1 alarm.',
+      badge: 'Canary Focus',
+      severity: 'Critical'
+    },
+    {
       id: 'judge_demo',
-      name: 'Hackathon Judge Demo',
+      name: 'Hackathon Judge Special Demo',
       target: 'WS-ENGINEERING-07',
       os: 'Out-Of-Order Telemetry Stream',
       icon: Sparkles,
-      desc: 'Intentionally delivers logs out of order to demonstrate PloyWeb temporal correlation engine, dynamic TraceGraph reconstruction, and SHA-256 evidence integrity.',
+      desc: 'Intentionally delivers logs out of order to demonstrate PloyWeb temporal correlation engine, dynamic GraphX reconstruction, and SHA-256 evidence integrity.',
       badge: 'Judge Special',
       severity: 'Critical'
     }
@@ -137,7 +137,7 @@ export const SimulationPage = ({ onNavigate, onInspectEvidence }) => {
               onClick={() => onNavigate('/tracegraph')}
               className="px-3.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
             >
-              <span>View in TraceGraph</span>
+              <span>View in GraphX</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
