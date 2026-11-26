@@ -69,7 +69,7 @@ export function App() {
       case '/canary-twin':
         return <CanaryTwinPage onInspectEvidence={handleInspectEvidence} />;
       case '/blast-radius':
-        return <BlastRadiusPage onNavigate={handleNavigate} />;
+        return <BlastRadiusPage onNavigate={handleNavigate} onInspectEvidence={handleInspectEvidence} />;
       case '/incident-response':
         return <IncidentResponsePage onNavigate={handleNavigate} />;
       case '/evidence':

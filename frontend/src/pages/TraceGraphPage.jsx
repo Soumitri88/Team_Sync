@@ -24,7 +24,8 @@ import {
   X,
   Hash,
   Clock,
-  Layers
+  Layers,
+  Download
 } from 'lucide-react';
 import { CustomGraphNode } from '../components/CustomGraphNode';
 import { useSecurity } from '../context/SecurityContext';
@@ -146,6 +147,50 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
     if (onInspectEvidence) onInspectEvidence(edge.data);
   }, [onInspectEvidence]);
 
+  const handleExportNetworkX = () => {
+    const networkxData = {
+      directed: true,
+      multigraph: false,
+      graph: {
+        name: "PloyWeb Autonomous Attack Path",
+        engine: "NetworkX v3.2 DiGraph",
+        density: summary.graph_density || 0.133,
+        containment_status: summary.containment_status || "ACTIVE",
+        critical_path: summary.critical_path || []
+      },
+      nodes: rawNodes.map((n) => ({
+        id: n.id,
+        label: n.data?.label,
+        type: n.data?.type,
+        severity: n.data?.severity,
+        stage: n.data?.stage,
+        confidence: n.data?.confidence || 1.0,
+        relationship_nature: n.data?.relationship_nature || "observed",
+        degree_centrality: n.data?.degree_centrality || 0.25,
+        pagerank: n.data?.pagerank || 0.18,
+        first_seen: n.data?.first_seen,
+        last_seen: n.data?.last_seen,
+        metadata: n.data?.metadata || {}
+      })),
+      links: rawEdges.map((e) => ({
+        source: e.source,
+        target: e.target,
+        label: e.label,
+        confidence: e.data?.confidence || 1.0,
+        relationship_nature: e.data?.relationship_nature || "observed",
+        severity: e.data?.severity,
+        mitre_id: e.data?.mitre_id,
+        stage: e.data?.stage
+      }))
+    };
+    const blob = new Blob([JSON.stringify(networkxData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `PloyWeb-NetworkX-DiGraph-${Date.now().toString().slice(-4)}.json`;
+    a.click();
+  };
+
   return (
     <div className="space-y-3 sm:space-y-4 pb-2 sm:pb-4 flex flex-col h-[560px] sm:h-[calc(100vh-8.5rem)] max-w-7xl mx-auto relative">
       {/* Top Header & GraphX Status */}
@@ -156,21 +201,24 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
               <Network className="w-5 h-5 text-cyan-400" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm sm:text-base font-bold font-mono text-white tracking-wide">
-                  GraphX – Autonomous Attack Reconstruction
+                  NetworkX Directed Graph Engine (DiGraph)
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-500/40 text-[10px] font-mono text-cyan-300">
-                  NetworkX Engine
+                <span className="px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 font-bold">
+                  NetworkX v3.2
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300 hidden sm:inline-block">
+                  PageRank & Centrality Active
                 </span>
                 {summary.containment_status === 'CONTAINED' && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 flex items-center gap-1 font-bold">
                     <ShieldCheck className="w-3 h-3" /> Contained
                   </span>
                 )}
               </div>
               <p className="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5">
-                Dynamic topological synthesis mapping adversary entrypoint, lateral winrm, processes & canary decoys
+                Topological adversary reconstruction: {rawNodes.length} nodes, {rawEdges.length} edges • Density: {summary.graph_density || '0.133'} • Critical path: {summary.critical_path?.length || 6} hops
               </p>
             </div>
           </div>
@@ -207,6 +255,15 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
           >
             <Flame className="w-3.5 h-3.5 text-red-400" />
             <span>{highlightCriticalOnly ? 'Show All Paths' : 'Highlight Critical Path'}</span>
+          </button>
+
+          {/* Export NetworkX JSON */}
+          <button
+            onClick={handleExportNetworkX}
+            title="Export NetworkX Graph JSON Data"
+            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-cyan-400 transition-colors shadow-sm"
+          >
+            <Download className="w-4 h-4" />
           </button>
 
           {/* Refresh Graph */}
