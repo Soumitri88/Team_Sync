@@ -1020,6 +1020,22 @@ def toggle_employee_lock(payload: LockTogglePayload):
         "message": f"Account {user['username']} has been {'LOCKED' if new_locked else 'UNLOCKED'} by Administrator."
     }
 
+@app.get("/api/admin/employees/{username}/login-history")
+def get_employee_login_history(username: str):
+    history = db_mgr.query_all("""
+        SELECT id, timestamp, ip_address, device_name as device, risk_score, risk_level, status, event_type
+        FROM auth_events
+        WHERE username = ?
+        ORDER BY timestamp DESC LIMIT 30
+    """, (username,))
+    baseline = anomaly_engine.get_user_baseline(username)
+    return {
+        "username": username,
+        "baseline": baseline,
+        "total_logins": len(history),
+        "login_history": history
+    }
+
 @app.get("/api/admin/approvals")
 def get_approvals():
     rows = db_mgr.query_all("SELECT * FROM admin_approvals ORDER BY timestamp DESC")

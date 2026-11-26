@@ -278,6 +278,25 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
     setTimeout(() => setActionStatusMsg(null), 4000);
   };
 
+  const handleSelectEmployee = async (emp) => {
+    setSelectedEmp(emp);
+    try {
+      const res = await fetch(`/api/admin/employees/${emp.username}/login-history`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.login_history && data.login_history.length > 0) {
+          setSelectedEmp(prev => prev ? {
+            ...prev,
+            login_history: data.login_history,
+            baseline: data.baseline || prev.baseline
+          } : null);
+        }
+      }
+    } catch (e) {
+      // offline fallback maintains pre-seeded rich login history
+    }
+  };
+
   const handleCreateAccount = (e) => {
     e.preventDefault();
     if (!newFullName || !newUsername) return;
@@ -440,7 +459,7 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
                 <tr
                   key={emp.user_id}
                   className="hover:bg-cyan-950/20 transition-colors cursor-pointer group"
-                  onClick={() => setSelectedEmp(emp)}
+                  onClick={() => handleSelectEmployee(emp)}
                 >
                   <td className="py-3 px-3">
                     <div className="font-bold text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1.5">
@@ -478,7 +497,7 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
                   <td className="py-3 px-3 text-right" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => setSelectedEmp(emp)}
+                        onClick={() => handleSelectEmployee(emp)}
                         className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1 transition-colors"
                         title="View Login History & Anomaly Baseline"
                       >
