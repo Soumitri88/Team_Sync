@@ -124,6 +124,52 @@ class PloyWebEndpointAgent:
                 }, f, indent=2)
         shutil.copy2(payroll_path, os.path.join(BACKUPS_DIR, "confidential_payroll_q3.json"))
 
+        # Create NovaTech Solutions Synthetic Corporate Dataset (Phase 11 Specification)
+        novatech_files = {
+            "Employee_Records.csv": (
+                "Employee_ID,Full_Name,Department,Title,Salary_USD,Email,Clearance\n"
+                "EMP-041,David Webb,Engineering,Senior Architect,165000,david.webb@novatech.local,CONFIDENTIAL\n"
+                "EMP-088,Sarah Connor,Operations,Infrastructure Lead,142000,sarah.connor@novatech.local,INTERNAL\n"
+                "EMP-102,Johnathan Doe,Finance,Treasury Controller,155000,john.doe@novatech.local,RESTRICTED\n"
+                "EMP-001,Alex Vance,Security,SOC Commander,180000,avance@novatech.local,DEFCON-ALPHA\n"
+            ),
+            "Customer_Database.csv": (
+                "Customer_ID,Company_Name,Primary_Contact,Annual_Contract_USD,Tier,Status\n"
+                "CUST-10491,Apex Logistics Global,billing@apexlogistics.demo,145820.50,Enterprise,Active\n"
+                "CUST-10492,BioSynth Pharmaceuticals,accounts@biosynth.demo,984000.10,Enterprise,Active\n"
+                "CUST-10493,Vanguard Financial Partners,finance@vanguardfp.demo,4512000.00,Premier,Active\n"
+                "CUST-10494,CyberDynamics Security Ltd,compliance@cyberdyn.demo,67210.80,Standard,Active\n"
+            ),
+            "Financial_Report.xlsx": (
+                "=== NOVATECH SOLUTIONS Q3 FINANCIAL REPORT ===\n"
+                "Quarter: Q3 2026 | Classification: CONFIDENTIAL BOARD DECK\n"
+                "Gross Revenue: $48,250,000 USD | Net Margin: 24.8%\n"
+                "Operating Cash Reserve: $18,400,000 USD\n"
+                "EBITDA: $12,950,000 USD\n"
+            ),
+            "Business_Strategy.txt": (
+                "=== NOVATECH SOLUTIONS 2026-2028 STRATEGIC ROADMAP ===\n"
+                "Classification: STRICTLY CONFIDENTIAL - EXECUTIVE LEADERSHIP ONLY\n"
+                "1. Expansion into Autonomous Cloud Threat Detection (PloyWeb Enterprise).\n"
+                "2. Planned M&A acquisition of CyberDynamics Security Ltd for $32M.\n"
+                "3. Patent Filing: GraphX Temporal Correlation & Blast Radius Traversal.\n"
+            ),
+            "Client_Contracts.txt": (
+                "=== MASTER CLIENT SERVICE LEVEL AGREEMENTS (SLA) ===\n"
+                "Organization: NovaTech Solutions Managed Security Services\n"
+                "Client 1: Apex Logistics Global - $145k/yr - 99.99% Egress SLA\n"
+                "Client 2: Vanguard Financial Partners - $4.5M/yr - Zero-Trust Vault SLA\n"
+                "Client 3: BioSynth Pharmaceuticals - $984k/yr - HIPAA/GDPR Compliance SLA\n"
+            )
+        }
+
+        for fname, content in novatech_files.items():
+            fpath = os.path.join(STAGING_DIR, fname)
+            if not os.path.exists(fpath):
+                with open(fpath, "w", encoding="utf-8") as f:
+                    f.write(content)
+            shutil.copy2(fpath, os.path.join(BACKUPS_DIR, fname))
+
     def _http_post(self, endpoint: str, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         url = f"{self.backend_url}{endpoint}"
         try:
@@ -715,8 +761,12 @@ class PloyWebEndpointAgent:
             quarantined_files.append(quarantine_zip)
             print(f"[✓] Quarantined staged exfiltration archive to: {quarantine_zip}")
 
-        # Restore synthetic customer records and payroll from backups
-        for fname in ["synthetic_customer_records.csv", "confidential_payroll_q3.json"]:
+        # Restore NovaTech synthetic customer records, payroll, and enterprise documents from backups
+        for fname in [
+            "synthetic_customer_records.csv", "confidential_payroll_q3.json",
+            "Employee_Records.csv", "Customer_Database.csv", "Financial_Report.xlsx",
+            "Business_Strategy.txt", "Client_Contracts.txt"
+        ]:
             bk = os.path.join(BACKUPS_DIR, fname)
             dst = os.path.join(STAGING_DIR, fname)
             if os.path.exists(bk):

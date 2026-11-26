@@ -326,6 +326,26 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
                 </div>
               </div>
 
+              {/* Relationship Nature & Evidence Confidence */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">Relationship</div>
+                  <span className={`text-[11px] font-bold mt-0.5 block uppercase ${
+                    (selectedEntity.raw?.relationship_nature || 'observed') === 'observed'
+                      ? 'text-cyan-300'
+                      : 'text-amber-300'
+                  }`}>
+                    {(selectedEntity.raw?.relationship_nature || 'observed') === 'observed' ? '✓ Observed' : '~ Inferred'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">Confidence</div>
+                  <div className="text-xs font-bold text-emerald-400 mt-0.5">
+                    {Math.round((selectedEntity.raw?.confidence || 0.95) * 100)}% Verified
+                  </div>
+                </div>
+              </div>
+
               {/* Description */}
               {selectedEntity.description && (
                 <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">

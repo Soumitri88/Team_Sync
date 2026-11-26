@@ -16,18 +16,21 @@ import {
   ShieldAlert,
   Globe,
   Laptop,
+  Users,
+  UserCheck,
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSecurity } from '../context/SecurityContext';
 
 export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, activePortal, switchPortal } = useAuth();
   const { stats, startDemo, demoActive } = useSecurity();
 
   const mainNav = [
     { id: 'landing', label: 'Platform Overview', path: '/landing', icon: Globe },
     { id: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { id: 'employees', label: 'Employee Roster', path: '/employees', icon: Users },
     { id: 'devices', label: 'Device Monitoring', path: '/devices', icon: Laptop },
     { id: 'simulation', label: 'Attack Simulator', path: '/simulation', icon: Flame },
     { id: 'tracegraph', label: 'GraphX Attack Path', path: '/tracegraph', icon: Network },
@@ -36,6 +39,7 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
   ];
 
   const secondaryNav = [
+    { id: 'employee-portal', label: 'Employee Portal View', path: '/employee-portal', icon: UserCheck },
     { id: 'canary-twin', label: 'Decoy Traps (Canary)', path: '/canary-twin', icon: Bug },
     { id: 'events', label: 'Event Logs', path: '/events', icon: Radio },
     { id: 'evidence', label: 'Evidence Hashes', path: '/evidence', icon: FileCheck2 },

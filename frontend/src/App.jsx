@@ -17,11 +17,13 @@ import { IncidentResponsePage } from './pages/IncidentResponsePage';
 import { EvidenceLedgerPage } from './pages/EvidenceLedgerPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { EmployeePortalPage } from './pages/EmployeePortalPage';
+import { EmployeeManagementPage } from './pages/EmployeeManagementPage';
 import { useAuth } from './context/AuthContext';
 import { useSecurity } from './context/SecurityContext';
 
 export function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, activePortal } = useAuth();
   const { isJudgeModalOpen, setIsJudgeModalOpen } = useSecurity();
   const [currentPath, setCurrentPath] = useState('/');
   const [inspectedItem, setInspectedItem] = useState(null);
@@ -43,9 +45,17 @@ export function App() {
   };
 
   const renderActivePage = () => {
+    if (activePortal === 'employee' && currentPath !== '/settings') {
+      return <EmployeePortalPage onNavigate={handleNavigate} />;
+    }
+
     switch (currentPath) {
       case '/':
         return <DashboardPage onNavigate={handleNavigate} onInspectEvidence={handleInspectEvidence} />;
+      case '/employees':
+        return <EmployeeManagementPage onInspectEvidence={handleInspectEvidence} />;
+      case '/employee-portal':
+        return <EmployeePortalPage onNavigate={handleNavigate} />;
       case '/landing':
         return <LandingPage onNavigate={handleNavigate} />;
       case '/devices':

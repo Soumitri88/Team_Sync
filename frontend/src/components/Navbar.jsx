@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 
 export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
   const { stats, refreshAll, demoActive, startDemo, runJudgeDemo, activeAlert, setActiveAlert, setIsJudgeModalOpen } = useSecurity();
-  const { user } = useAuth();
+  const { user, activePortal, switchPortal } = useAuth();
   const [time, setTime] = useState(new Date().toUTCString().slice(17, 25));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isJudgeRunning, setIsJudgeRunning] = useState(false);
@@ -54,6 +54,10 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
         return { full: 'Cryptographic Evidence Ledger (SHA-256)', short: 'Evidence Ledger' };
       case '/reports':
         return { full: 'Investigation Report Dossier', short: 'Report Dossier' };
+      case '/employees':
+        return { full: 'Employee Identity & Access Governance', short: 'Employees' };
+      case '/employee-portal':
+        return { full: 'Employee Security Portal', short: 'Employee Portal' };
       case '/settings':
         return { full: 'Platform & SOC Settings', short: 'Settings' };
       default:
@@ -144,6 +148,20 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
               <span className="sm:hidden">Demo</span>
             </button>
           )}
+
+          {/* Portal Switcher Button */}
+          <button
+            onClick={() => switchPortal(activePortal === 'admin' ? 'employee' : 'admin')}
+            title="Switch between Master SOC Portal and Employee Portal"
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-mono font-bold border transition-all flex items-center gap-1.5 shadow-sm ${
+              activePortal === 'employee'
+                ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                : 'bg-cyan-950 text-cyan-300 border-cyan-500/50 shadow-neon-cyan'
+            }`}
+          >
+            <span>{activePortal === 'employee' ? 'EMPLOYEE PORTAL' : 'SOC ADMIN'}</span>
+            <span className="text-[10px] text-slate-400 font-normal hidden lg:inline">⇄ Switch</span>
+          </button>
 
           {/* Operator Name */}
           <div className="flex items-center gap-2 pl-1.5 sm:pl-2 border-l border-slate-800 text-xs">

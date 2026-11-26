@@ -811,6 +811,236 @@ async def run_protection_demo():
         "message": "All threat vectors neutralized. Simulated device safely isolated and credentials revoked."
     }
 
+# ==================== PHASE 4 & 5: REAL AUTHENTICATION & EMPLOYEE PORTAL APIS ====================
+from pydantic import BaseModel
+from .db_sqlite import db_mgr, hash_password, verify_password
+from .auth_service import authenticate_user, verify_mfa, record_audit_log
+
+class LoginPayload(BaseModel):
+    username: str
+    password: str
+    ip_address: Optional[str] = "127.0.0.1"
+    device_name: Optional[str] = "Web-Portal-Client"
+
+class MFAPayload(BaseModel):
+    session_id: str
+    code: str
+
+class PasswordChangePayload(BaseModel):
+    user_id: str
+    old_password: str
+    new_password: str
+
+class LockTogglePayload(BaseModel):
+    user_id: str
+    is_locked: int
+    reason: Optional[str] = "Admin security intervention"
+
+class ApprovalPayload(BaseModel):
+    incident_id: str
+    decision: str  # APPROVE, REJECT, ESCALATE
+    reason: str
+    action_requested: str
+    reviewer_name: Optional[str] = "SOC-Commander"
+
+@app.post("/api/auth/login")
+def api_auth_login(payload: LoginPayload):
+    result = authenticate_user(
+        identifier=payload.username,
+        password=payload.password,
+        ip_address=payload.ip_address,
+        device_name=payload.device_name
+    )
+    return result
+
+@app.post("/api/auth/verify-mfa")
+def api_auth_verify_mfa(payload: MFAPayload):
+    result = verify_mfa(payload.session_id, payload.code)
+    return result
+
+@app.post("/api/auth/logout")
+def api_auth_logout(session_token: Optional[str] = Query(None)):
+    if session_token:
+        db_mgr.execute("UPDATE login_sessions SET is_active = 0 WHERE session_token = ?", (session_token,))
+    return {"success": True, "message": "Session terminated successfully."}
+
+@app.get("/api/auth/me")
+def api_auth_me(token: Optional[str] = Query(None)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Session token required")
+    session = db_mgr.query_one("""
+        SELECT s.*, u.username, u.full_name, u.email, u.is_locked, r.name as role,
+               e.employee_id, e.department, e.title, e.security_clearance
+        FROM login_sessions s
+        JOIN users u ON s.user_id = u.id
+        LEFT JOIN roles r ON u.role_id = r.id
+        LEFT JOIN employees e ON u.id = e.user_id
+        WHERE s.session_token = ? AND s.is_active = 1
+    """, (token,))
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return {
+        "authenticated": True,
+        "user": session
+    }
+
+# ==================== EMPLOYEE / CUSTOMER PORTAL APIS ====================
+
+@app.get("/api/employee/dashboard")
+def get_employee_dashboard(user_id: Optional[str] = Query("usr-david")):
+    user = db_mgr.query_one("""
+        SELECT u.id, u.username, u.full_name, u.email, u.is_locked, u.created_at,
+               e.employee_id, e.department, e.title, e.security_clearance
+        FROM users u
+        LEFT JOIN employees e ON u.id = e.user_id
+        WHERE u.id = ? OR u.username = ?
+    """, (user_id, user_id))
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    # Login history (last 10)
+    history = db_mgr.query_all("""
+        SELECT id, event_type, ip_address, device_name, risk_score, risk_level, status, timestamp
+        FROM auth_events
+        WHERE user_id = ? OR username = ?
+        ORDER BY timestamp DESC LIMIT 10
+    """, (user["id"], user["username"]))
+
+    # Registered devices
+    devices = db_mgr.query_all("SELECT * FROM devices WHERE status = 'connected'")
+
+    # Security notifications & alerts
+    alerts = db_mgr.query_all("""
+        SELECT * FROM notifications
+        WHERE user_id = ? OR user_id IS NULL
+        ORDER BY created_at DESC LIMIT 5
+    """, (user["id"],))
+
+    # Active sessions
+    sessions = db_mgr.query_all("""
+        SELECT id, ip_address, device_name, created_at, expires_at, is_active
+        FROM login_sessions
+        WHERE user_id = ? AND is_active = 1
+        ORDER BY created_at DESC
+    """, (user["id"],))
+
+    return {
+        "profile": user,
+        "login_history": history,
+        "registered_devices": devices,
+        "security_alerts": alerts,
+        "active_sessions": sessions,
+        "account_security_status": "SECURE" if user.get("is_locked") == 0 else "LOCKED",
+        "mfa_enforced": True
+    }
+
+@app.post("/api/employee/change-password")
+def api_change_password(payload: PasswordChangePayload):
+    user = db_mgr.query_one("SELECT * FROM users WHERE id = ?", (payload.user_id,))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(payload.old_password, user["salt"], user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password incorrect.")
+
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+
+    new_hash, new_salt = hash_password(payload.new_password)
+    now_str = datetime.utcnow().isoformat()
+    db_mgr.execute("""
+        UPDATE users
+        SET password_hash = ?, salt = ?, updated_at = ?
+        WHERE id = ?
+    """, (new_hash, new_salt, now_str, payload.user_id))
+
+    record_audit_log(payload.user_id, user["username"], "PASSWORD_CHANGE", None, "SUCCESS", "User changed account password.")
+    return {"success": True, "message": "Password changed successfully."}
+
+# ==================== MASTER ADMIN: EMPLOYEE & APPROVAL MANAGEMENT ====================
+
+@app.get("/api/admin/employees")
+def get_all_employees():
+    employees = db_mgr.query_all("""
+        SELECT u.id as user_id, u.username, u.full_name, u.email, u.is_locked, u.failed_attempts,
+               u.lockout_until, u.created_at, r.name as role,
+               e.employee_id, e.department, e.title, e.security_clearance, e.status as emp_status
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        LEFT JOIN employees e ON u.id = e.user_id
+        ORDER BY u.created_at ASC
+    """)
+    return {"total": len(employees), "employees": employees}
+
+@app.post("/api/admin/employees/lock-toggle")
+def toggle_employee_lock(payload: LockTogglePayload):
+    user = db_mgr.query_one("SELECT * FROM users WHERE id = ?", (payload.user_id,))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    new_locked = 1 if payload.is_locked == 1 else 0
+    now_str = datetime.utcnow().isoformat()
+    db_mgr.execute("""
+        UPDATE users
+        SET is_locked = ?, failed_attempts = 0, lockout_until = NULL, updated_at = ?
+        WHERE id = ?
+    """, (new_locked, now_str, payload.user_id))
+
+    action_text = "ADMIN_LOCK_ACCOUNT" if new_locked else "ADMIN_UNLOCK_ACCOUNT"
+    record_audit_log("usr-01", "Alex Vance", action_text, None, "SUCCESS", f"{action_text} on user {user['username']}: {payload.reason}")
+
+    return {
+        "success": True,
+        "user_id": payload.user_id,
+        "is_locked": new_locked,
+        "message": f"Account {user['username']} has been {'LOCKED' if new_locked else 'UNLOCKED'} by Administrator."
+    }
+
+@app.get("/api/admin/approvals")
+def get_approvals():
+    rows = db_mgr.query_all("SELECT * FROM admin_approvals ORDER BY timestamp DESC")
+    return {"total": len(rows), "approvals": rows}
+
+@app.post("/api/admin/approvals")
+def record_approval(payload: ApprovalPayload):
+    now_str = datetime.utcnow().isoformat()
+    appr_id = f"APPR-{secrets.token_hex(4).upper()}"
+
+    db_mgr.execute("""
+        INSERT INTO admin_approvals (id, incident_id, reviewer_id, reviewer_name, decision, reason, action_requested, timestamp, execution_result, verification_result)
+        VALUES (?, ?, 'usr-01', ?, ?, ?, ?, ?, 'EXECUTED', 'VERIFIED_COMPLIANT')
+    """, (appr_id, payload.incident_id, payload.reviewer_name, payload.decision, payload.reason, payload.action_requested, now_str))
+
+    record_audit_log("usr-01", payload.reviewer_name, f"INCIDENT_RESPONSE_{payload.decision}", payload.incident_id, "SUCCESS",
+                     f"Decision: {payload.decision} for {payload.action_requested}. Reason: {payload.reason}")
+
+    return {
+        "success": True,
+        "approval_id": appr_id,
+        "decision": payload.decision,
+        "timestamp": now_str
+    }
+
+@app.get("/api/admin/audit-logs")
+def get_audit_logs():
+    rows = db_mgr.query_all("SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 50")
+    # Verify cryptographic hash chain integrity
+    is_valid = True
+    for i in range(len(rows) - 1):
+        curr = rows[i]
+        prev = rows[i + 1]
+        if curr["previous_hash"] != prev["current_hash"]:
+            is_valid = False
+            break
+
+    return {
+        "total": len(rows),
+        "chain_valid": is_valid,
+        "root_hash": rows[0]["current_hash"] if rows else "GENESIS",
+        "logs": rows
+    }
+
 # ==================== STATIC FILE SERVING FOR FULL-STACK DEPLOYMENT ====================
 import os
 from fastapi.staticfiles import StaticFiles

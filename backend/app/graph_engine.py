@@ -58,6 +58,9 @@ def build_attack_graph() -> Dict[str, Any]:
             else:
                 vis_state = "normal"
 
+            confidence = 1.0 if node_type in ["device", "process", "file", "canary", "network"] else 0.88
+            rel_nature = "observed" if node_type in ["device", "process", "file", "canary", "network"] else "inferred"
+
             node_registry[node_id] = {
                 "id": node_id,
                 "label": label,
@@ -65,6 +68,8 @@ def build_attack_graph() -> Dict[str, Any]:
                 "severity": severity,
                 "visual_state": vis_state,
                 "stage": 1,
+                "confidence": confidence,
+                "relationship_nature": rel_nature,
                 "metadata": metadata or {},
                 "event_references": []
             }
@@ -308,14 +313,27 @@ def build_attack_graph() -> Dict[str, Any]:
 
         if edge_src_id and edge_dst_id and edge_src_id != edge_dst_id:
             edge_id = f"edge-{evt_id}-{step_num}"
+            # Classify relationship as observed vs inferred with explicit confidence score
+            if evt_type in ["suspicious_process_spawn", "file_discovery", "data_collection", "data_staged", "exfiltration_attempt", "exfiltration_blocked", "incident_contained", "canary_access"]:
+                confidence = 1.0
+                rel_nature = "observed"
+            elif evt_type in ["suspicious_login", "brute_force"]:
+                confidence = 0.95
+                rel_nature = "observed"
+            else:
+                confidence = 0.82
+                rel_nature = "inferred"
+
             edge_data = {
                 "id": edge_id,
                 "source": edge_src_id,
                 "target": edge_dst_id,
-                "label": edge_label,
+                "label": f"{edge_label} [{rel_nature.upper()} • {int(confidence*100)}%]",
                 "event_id": evt_id,
                 "step": step_num,
                 "stage": stage,
+                "confidence": confidence,
+                "relationship_nature": rel_nature,
                 "timestamp": evt.get("timestamp"),
                 "event_type": evt_type,
                 "severity": severity,
