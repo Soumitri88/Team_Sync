@@ -32,6 +32,7 @@ import { CustomGraphNode } from '../components/CustomGraphNode';
 import { useSecurity } from '../context/SecurityContext';
 import { INITIAL_ATTACK_GRAPH } from '../services/clientEngine';
 import { WhyFlaggedModal } from '../components/WhyFlaggedModal';
+import { CriticalPathExportModal } from '../components/CriticalPathExportModal';
 
 const nodeTypes = {
   custom: CustomGraphNode,
@@ -41,6 +42,7 @@ const nodeTypes = {
 export const TraceGraphPage = ({ onInspectEvidence }) => {
   const { attackGraph, refreshAll, executeResponseAction, runJudgeDemo } = useSecurity();
   const [whyFlaggedOpen, setWhyFlaggedOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [highlightCriticalOnly, setHighlightCriticalOnly] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
   const [telemetryFilter, setTelemetryFilter] = useState('all'); // 'all' | 'observed' | 'inferred'
@@ -325,13 +327,14 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
             <span>{highlightCriticalOnly ? 'Show All Paths' : 'Highlight Critical Path'}</span>
           </button>
 
-          {/* Export NetworkX JSON */}
+          {/* Download Critical Path connecting Danger Nodes */}
           <button
-            onClick={handleExportNetworkX}
-            title="Export NetworkX Graph JSON Data"
-            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-cyan-400 transition-colors shadow-sm"
+            onClick={() => setIsExportModalOpen(true)}
+            title="Download Critical Attack Path connecting Danger Nodes"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/50 text-cyan-300 hover:text-white font-mono text-xs font-bold transition-all shadow-neon-cyan"
           >
             <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Download Critical Path</span>
           </button>
 
           {/* Refresh Graph */}
@@ -642,6 +645,15 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
         isOpen={whyFlaggedOpen}
         onClose={() => setWhyFlaggedOpen(false)}
         targetItem={selectedEntity?.raw || selectedEntity}
+      />
+
+      {/* Critical Path & Danger Edges Export Modal */}
+      <CriticalPathExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        rawNodes={rawNodes}
+        rawEdges={rawEdges}
+        summary={summary}
       />
     </div>
   );
