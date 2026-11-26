@@ -3,14 +3,15 @@ import {
   Sparkles, 
   RefreshCw, 
   AlertCircle,
-  Menu
+  Menu,
+  LogOut
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
 
 export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
   const { stats, refreshAll, demoActive, startDemo, runJudgeDemo, activeAlert, setActiveAlert, setIsJudgeModalOpen } = useSecurity();
-  const { user, activePortal, switchPortal } = useAuth();
+  const { user, logout, activePortal, switchPortal } = useAuth();
   const [time, setTime] = useState(new Date().toUTCString().slice(17, 25));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isJudgeRunning, setIsJudgeRunning] = useState(false);
@@ -163,7 +164,7 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
             <span className="text-[10px] text-slate-400 font-normal hidden lg:inline">⇄ Switch</span>
           </button>
 
-          {/* Operator Name */}
+          {/* Operator Name & Sign Out */}
           <div className="flex items-center gap-2 pl-1.5 sm:pl-2 border-l border-slate-800 text-xs">
             <div className="w-6 h-6 rounded-full bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-[10px] font-bold text-cyan-300">
               {user?.avatar || 'AV'}
@@ -172,6 +173,13 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
               <span className="text-slate-200 font-medium text-xs block leading-tight">{user?.name || 'Operator'}</span>
               <span className="text-[10px] text-slate-500 block leading-none">{user?.role || 'SOC Analyst'}</span>
             </div>
+            <button
+              onClick={logout}
+              title="Sign Out / Switch Account"
+              className="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/40 transition-colors ml-0.5"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>

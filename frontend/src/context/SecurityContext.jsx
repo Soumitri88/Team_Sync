@@ -1057,6 +1057,163 @@ export const SecurityProvider = ({ children }) => {
     }
   };
 
+  // ==================== AUTH TELEMETRY & ATTACK GRAPH INGESTION ====================
+  const recordAuthTelemetryEvent = useCallback(async ({
+    username,
+    employeeId = 'EMP-041',
+    ipAddress = '198.51.100.44',
+    deviceName = 'WS-ENGINEERING-07',
+    attemptNumber = 1,
+    isSuccess = false,
+    isLockout = false,
+    failureReason = 'Password verification mismatch'
+  }) => {
+    const nowStr = new Date().toISOString();
+    const rawPayload = `${username}|${employeeId}|${ipAddress}|${deviceName}|${attemptNumber}|${nowStr}|${isLockout ? 'LOCKOUT' : (isSuccess ? 'SUCCESS' : 'FAILED')}`;
+
+    let evidenceHash = '';
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(rawPayload);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      evidenceHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      evidenceHash = Array.from(rawPayload).reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) >>> 0, 0).toString(16).padStart(64, '0');
+    }
+
+    const eventId = isLockout
+      ? `EVT-BF-${Date.now().toString().slice(-4)}`
+      : isSuccess
+        ? `EVT-AUTH-${Date.now().toString().slice(-4)}`
+        : `EVT-FAIL-${Date.now().toString().slice(-4)}`;
+
+    const newEvent = {
+      id: eventId,
+      timestamp: nowStr,
+      device_id: 'DEV-001',
+      device_name: deviceName,
+      process_id: 1104,
+      process_name: 'lsass.exe / LogonUI.exe',
+      parent_process_id: 648,
+      parent_process: 'winlogon.exe',
+      event_type: isLockout ? 'brute_force' : (isSuccess ? 'user_login' : 'login_failure'),
+      event_description: isLockout
+        ? `[ACCOUNT KNOCKED OUT] 3 consecutive failed authentication attempts detected for ${username} (${employeeId}) from external IP ${ipAddress}. 15-minute defensive account knockout engaged.`
+        : isSuccess
+          ? `Interactive user session authenticated for ${username} (${employeeId}) on ${deviceName} from ${ipAddress}.`
+          : `Authentication failure (Attempt ${attemptNumber}/3) for ${username} on ${deviceName} from IP ${ipAddress}.`,
+      severity: isLockout ? 'critical' : (isSuccess ? 'info' : (attemptNumber >= 2 ? 'high' : 'medium')),
+      mitre_id: isLockout ? 'T1110' : (isSuccess ? 'T1078' : 'T1110.001'),
+      mitre_name: isLockout ? 'Brute Force: Password Guessing' : (isSuccess ? 'Valid Accounts' : 'Password Guessing Attempt'),
+      mitre_tactic: isLockout ? 'Credential Access' : 'Initial Access',
+      stage: isLockout ? 1 : (isSuccess ? 0 : 1),
+      evidence_hash: evidenceHash,
+      status: isLockout ? 'detected' : 'logged',
+      source_ip: ipAddress,
+      destination_ip: '10.0.2.14',
+      username: username,
+      why_flagged: {
+        score: isLockout ? 95 : (attemptNumber === 2 ? 65 : 40),
+        baseline: 'Corporate subnet (10.0.2.x), 0 failures, standard business hours',
+        signals: isLockout
+          ? [
+              { signal: 'Adversary External IP (198.51.100.44)', weight: 35 },
+              { signal: 'Velocity Anomaly (3 failures < 60s)', weight: 30 },
+              { signal: 'Exceeded Maximum Failed Authentication Threshold', weight: 20 },
+              { signal: 'High Risk Brute Force Pattern (T1110)', weight: 10 }
+            ]
+          : [
+              { signal: 'External Source IP', weight: 25 },
+              { signal: `Authentication Failure #${attemptNumber}`, weight: 20 }
+            ]
+      }
+    };
+
+    // Prepend to security events and evidence ledger
+    setEvents(prev => [newEvent, ...(prev || [])]);
+    setEvidenceLedger(prev => ({
+      total_records: (prev?.total_records || 0) + 1,
+      records: [newEvent, ...(prev?.records || [])]
+    }));
+
+    if (isLockout) {
+      setStats(prev => ({
+        ...prev,
+        total_events: (prev?.total_events || 0) + 1,
+        threat_count: (prev?.threat_count || 0) + 1,
+        critical_alerts: (prev?.critical_alerts || 0) + 1,
+        overall_status: 'CRITICAL_THREAT'
+      }));
+
+      // Update Attack Graph with knockout node and edge
+      setAttackGraph(prev => {
+        const prevGraph = prev || INITIAL_ATTACK_GRAPH;
+        const nodes = [...(prevGraph.nodes || [])];
+        const edges = [...(prevGraph.edges || [])];
+
+        // Find or create adversary IP node
+        let attackerNode = nodes.find(n => n.id === 'node-attacker-198.51.100.44');
+        if (attackerNode) {
+          attackerNode.data = {
+            ...attackerNode.data,
+            visual_state: 'malicious-simulation',
+            details: `Adversary origin [198.51.100.44] executed 3 rapid brute-force attempts on ${username}. Triggered T1110 knockout.`,
+            last_seen: nowStr
+          };
+        }
+
+        // Find or create target user node
+        let userNode = nodes.find(n => n.id === `node-user-${username}` || n.id === 'node-user-david.webb');
+        if (userNode) {
+          userNode.data = {
+            ...userNode.data,
+            label: `${username} [KNOCKED OUT]`,
+            visual_state: 'contained',
+            details: `Account temporarily locked out for 15 minutes following 3 consecutive authentication failures. Defended by PloyWeb SOC.`,
+            last_seen: nowStr
+          };
+        }
+
+        // Update Edge 1 connecting attacker to user
+        let edge1 = edges.find(e => e.id === 'edge-1' || (e.source === 'node-attacker-198.51.100.44' && (e.target === `node-user-${username}` || e.target === 'node-user-david.webb')));
+        if (edge1) {
+          edge1.label = 'Stage 1: T1110 Brute-Force Lockout (3 Failures) [OBSERVED • 100%]';
+          edge1.data = {
+            ...edge1.data,
+            severity: 'critical',
+            mitre_id: 'T1110',
+            confidence: 1.0,
+            relationship_nature: 'observed',
+            details: '3 consecutive authentication failures triggered automated 15-minute account knockout.'
+          };
+        }
+
+        return {
+          ...prevGraph,
+          nodes,
+          edges
+        };
+      });
+
+      setActiveAlert({
+        id: 'ALERT-BF-LOCKOUT',
+        title: 'ACCOUNT KNOCKOUT ENFORCED (T1110)',
+        description: `Account '${username}' knocked out for 15 minutes after 3 failed login attempts on ${deviceName} from ${ipAddress}. NetworkX Attack Graph updated.`
+      });
+    }
+
+    // Try posting to backend if online
+    try {
+      fetch('/api/events/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEvent)
+      }).catch(() => {});
+    } catch (e) {}
+
+    return newEvent;
+  }, []);
+
   // ==================== GUIDED DEMO MODE LOGIC ====================
   // 9 Required Steps:
   // 1. Suspicious login detected
@@ -1230,6 +1387,7 @@ export const SecurityProvider = ({ children }) => {
         demoStepsList: DEMO_STEPS,
         currentDemoStep: DEMO_STEPS[demoStep - 1],
         startDemo,
+        recordAuthTelemetryEvent,
         nextDemoStep,
         prevDemoStep,
         exitDemo

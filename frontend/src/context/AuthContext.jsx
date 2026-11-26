@@ -64,8 +64,14 @@ export const DEMO_EMPLOYEES = {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
+    // Only resume active session if explicit in current browser session
+    const isSessionActive = sessionStorage.getItem("ployweb_session_active");
+    if (!isSessionActive) {
+      // First visit / fresh tab: start on the login form!
+      return null;
+    }
     const saved = localStorage.getItem("ployweb_user");
-    return saved ? JSON.parse(saved) : DEMO_ADMINS.commander;
+    return saved ? JSON.parse(saved) : null;
   });
 
   const [activePortal, setActivePortal] = useState(() => {
@@ -73,15 +79,17 @@ export const AuthProvider = ({ children }) => {
     if (savedPortal) return savedPortal;
     const saved = localStorage.getItem("ployweb_user");
     if (saved) {
-      const u = JSON.parse(saved);
-      return u.role === "employee" ? "employee" : "admin";
+      try {
+        const u = JSON.parse(saved);
+        return u.role === "employee" ? "employee" : "admin";
+      } catch (e) {}
     }
     return "admin";
   });
 
   const [token, setToken] = useState(() => localStorage.getItem("ployweb_token") || null);
 
-  const loginWithCredentials = async (username, password, ipAddress = "10.0.2.14", deviceName = "WS-ENGINEERING-07") => {
+  const loginWithCredentials = async (username, password, ipAddress = "198.51.100.44", deviceName = "WS-ENGINEERING-07") => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -99,6 +107,7 @@ export const AuthProvider = ({ children }) => {
         setToken(data.token);
         const portal = data.user.role === "employee" ? "employee" : "admin";
         setActivePortal(portal);
+        sessionStorage.setItem("ployweb_session_active", "true");
         localStorage.setItem("ployweb_user", JSON.stringify(data.user));
         localStorage.setItem("ployweb_token", data.token);
         localStorage.setItem("ployweb_active_portal", portal);
@@ -106,8 +115,58 @@ export const AuthProvider = ({ children }) => {
       }
       return data;
     } catch (err) {
-      // Offline fallback
-      return { success: false, error: "Backend offline. Use persona selection." };
+      // Client-side offline engine verification
+      const cleanUser = (username || "").trim().toLowerCase();
+      let matched = null;
+      let matchedRole = "employee";
+
+      // 1. Check Master Admins
+      if (cleanUser === "avance.soc" || cleanUser === "alex vance" || cleanUser === "admin" || cleanUser === "emp-001") {
+        matched = DEMO_ADMINS.commander;
+        matchedRole = "admin";
+      } else if (cleanUser === "erostova.forensics" || cleanUser === "elena" || cleanUser === "emp-002") {
+        matched = DEMO_ADMINS.forensics;
+        matchedRole = "admin";
+      } else if (cleanUser === "mmiller.analyst" || cleanUser === "marcus" || cleanUser === "emp-003") {
+        matched = DEMO_ADMINS.analyst;
+        matchedRole = "admin";
+      } else {
+        // 2. Check Employees
+        const foundEmp = Object.values(DEMO_EMPLOYEES).find(e =>
+          (e.username && e.username.toLowerCase() === cleanUser) ||
+          (e.employee_id && e.employee_id.toLowerCase() === cleanUser) ||
+          (e.id && e.id.toLowerCase() === cleanUser)
+        );
+        if (foundEmp) {
+          matched = foundEmp;
+          matchedRole = "employee";
+        }
+      }
+
+      // Check valid passwords
+      const validPasswords = [
+        "PloyWeb@2026!",
+        "Employee@2026!",
+        "password123",
+        "admin",
+        "socadmin"
+      ];
+      const isKnownValidPw = validPasswords.includes(password) || (matched && matched.password === password);
+
+      if (matched && isKnownValidPw) {
+        setUser(matched);
+        setActivePortal(matchedRole);
+        sessionStorage.setItem("ployweb_session_active", "true");
+        localStorage.setItem("ployweb_user", JSON.stringify(matched));
+        localStorage.setItem("ployweb_active_portal", matchedRole);
+        return { success: true, user: matched, portal: matchedRole };
+      }
+
+      return {
+        success: false,
+        error: "Invalid Employee ID / username or password.",
+        code: "INVALID_CREDENTIALS"
+      };
     }
   };
 
@@ -184,6 +243,7 @@ export const AuthProvider = ({ children }) => {
       setActivePortal("admin");
       localStorage.setItem("ployweb_active_portal", "admin");
     }
+    sessionStorage.setItem("ployweb_session_active", "true");
     setUser(selected);
     localStorage.setItem("ployweb_user", JSON.stringify(selected));
     return selected;
@@ -206,6 +266,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       fetch(`/api/auth/logout?session_token=${token}`, { method: "POST" }).catch(() => {});
     }
+    sessionStorage.removeItem("ployweb_session_active");
     setUser(null);
     setToken(null);
     localStorage.removeItem("ployweb_user");
