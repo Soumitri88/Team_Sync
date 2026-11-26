@@ -995,6 +995,23 @@ export const SecurityProvider = ({ children }) => {
       });
     } catch (e) {}
 
+    // Find approval target details
+    const targetApproval = approvals.find(a => a.id === approvalId);
+    const targetEntity = targetApproval?.target || "WS-ENGINEERING-07";
+    const requestedAction = targetApproval?.action_requested || approvalId;
+
+    // Generate SHA-256 audit seal hash
+    const rawAuditPayload = `${approvalId}|${decision}|${reviewerName}|${targetEntity}|${nowStr}`;
+    let auditHash = "";
+    try {
+      const encoder = new TextEncoder();
+      const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(rawAuditPayload));
+      auditHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    } catch (e) {
+      auditHash = Array.from(rawAuditPayload).reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) >>> 0, 0).toString(16).padStart(64, "0");
+    }
+
+    // 1. Update approvals state
     setApprovals(prev => prev.map(a => {
       if (a.id === approvalId) {
         return {
@@ -1009,8 +1026,44 @@ export const SecurityProvider = ({ children }) => {
       return a;
     }));
 
+    // 2. Append to Immutable Containment Action Audit Trail
+    const newAuditAction = {
+      id: `ACT-APPR-${Date.now().toString().slice(-4)}`,
+      action_type: `ADMIN_DECISION: ${decision}`,
+      target: targetEntity,
+      operator: reviewerName,
+      status: decision === 'APPROVED' ? 'CONTAINED' : decision === 'REJECTED' ? 'REJECTED' : 'ESCALATED',
+      timestamp: nowStr,
+      integrity_hash: auditHash,
+      details: reason || `${requestedAction} decision marked as ${decision} by ${reviewerName}`
+    };
+    setActions(prev => [newAuditAction, ...(prev || [])]);
+
+    // 3. Append to Event Logs and Cryptographic Evidence Ledger
+    const newApprovalEvent = {
+      id: `EVT-APPR-${Date.now().toString().slice(-4)}`,
+      timestamp: nowStr,
+      device_id: "DEV-001",
+      device_name: "WS-ENGINEERING-07",
+      process_id: 1104,
+      process_name: "PloyWeb-SOC-ApprovalEngine.exe",
+      event_type: "admin_approval",
+      event_description: `[ADMIN APPROVAL WORKFLOW] Reviewer ${reviewerName} marked action ${approvalId} (${requestedAction}) as ${decision}. Target: ${targetEntity}.`,
+      severity: decision === 'APPROVED' ? 'info' : (decision === 'ESCALATED' ? 'critical' : 'medium'),
+      mitre_id: "M1049",
+      mitre_name: "Antivirus/EDR Containment",
+      evidence_hash: auditHash,
+      status: decision === 'APPROVED' ? 'executed' : (decision === 'REJECTED' ? 'rejected' : 'escalated'),
+      username: reviewerName
+    };
+    setEvents(prev => [newApprovalEvent, ...(prev || [])]);
+    setEvidenceLedger(prev => ({
+      total_records: (prev?.total_records || 0) + 1,
+      records: [newApprovalEvent, ...(prev?.records || [])]
+    }));
+
+    // 4. Update Attack Graph based on decision
     if (decision === 'APPROVED') {
-      // Execute containment on attack graph
       setAttackGraph(prev => {
         const prevGraph = prev || INITIAL_ATTACK_GRAPH;
         return {
@@ -1048,12 +1101,78 @@ export const SecurityProvider = ({ children }) => {
         id: "ALERT-APPROVAL-EXEC",
         title: `DEFENSE AUTHORIZED: ${decision}`,
         description: `Remediation action '${approvalId}' approved and authorized by ${reviewerName}. Target contained.`,
-        device: "WS-ENGINEERING-07",
+        device: targetEntity,
         mitre: "RESPONSE-CONTAIN",
         timestamp: nowStr
       });
 
       confetti({ particleCount: 130, spread: 85, origin: { y: 0.6 } });
+    } else if (decision === 'REJECTED') {
+      setAttackGraph(prev => {
+        const prevGraph = prev || INITIAL_ATTACK_GRAPH;
+        return {
+          ...prevGraph,
+          summary: {
+            ...prevGraph.summary,
+            containment_status: "REJECTED_REVIEW"
+          },
+          nodes: (prevGraph.nodes || []).map(n => {
+            if (n.data?.label?.includes(targetEntity) || n.id?.includes(targetEntity)) {
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  visual_state: 'normal',
+                  details: `Remediation action rejected by ${reviewerName}. Host remains under passive observation.`
+                }
+              };
+            }
+            return n;
+          })
+        };
+      });
+
+      setActiveAlert({
+        id: "ALERT-APPROVAL-REJECT",
+        title: `REMEDIATION REJECTED: ${approvalId}`,
+        description: `Proposed containment for '${targetEntity}' was rejected by ${reviewerName}. Host remains unquarantined.`,
+        device: targetEntity,
+        mitre: "ACTION-REJECTED",
+        timestamp: nowStr
+      });
+    } else if (decision === 'ESCALATED') {
+      setAttackGraph(prev => {
+        const prevGraph = prev || INITIAL_ATTACK_GRAPH;
+        return {
+          ...prevGraph,
+          summary: {
+            ...prevGraph.summary,
+            containment_status: "DEFCON_1_ESCALATED"
+          },
+          nodes: (prevGraph.nodes || []).map(n => {
+            if (n.data?.label?.includes(targetEntity) || n.id?.includes(targetEntity) || n.data?.is_patient_zero) {
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  visual_state: 'malicious-simulation',
+                  details: `DEFCON-1 ESCALATION: Action ${approvalId} escalated to Tier-3 incident response by ${reviewerName}.`
+                }
+              };
+            }
+            return n;
+          })
+        };
+      });
+
+      setActiveAlert({
+        id: "ALERT-APPROVAL-ESCALATE",
+        title: `CRITICAL ESCALATION: ${approvalId}`,
+        description: `Remediation action '${approvalId}' escalated to Tier-3 emergency response by ${reviewerName}.`,
+        device: targetEntity,
+        mitre: "DEFCON-1-ESCALATE",
+        timestamp: nowStr
+      });
     }
   };
 
