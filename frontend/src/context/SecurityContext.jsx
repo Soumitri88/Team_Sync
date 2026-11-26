@@ -1066,10 +1066,13 @@ export const SecurityProvider = ({ children }) => {
     attemptNumber = 1,
     isSuccess = false,
     isLockout = false,
+    isHighRiskBlocked = false,
+    riskScore = 0,
+    riskSignals = [],
     failureReason = 'Password verification mismatch'
   }) => {
     const nowStr = new Date().toISOString();
-    const rawPayload = `${username}|${employeeId}|${ipAddress}|${deviceName}|${attemptNumber}|${nowStr}|${isLockout ? 'LOCKOUT' : (isSuccess ? 'SUCCESS' : 'FAILED')}`;
+    const rawPayload = `${username}|${employeeId}|${ipAddress}|${deviceName}|${attemptNumber}|${nowStr}|${isHighRiskBlocked ? 'HIGH_RISK_BLOCK' : (isLockout ? 'LOCKOUT' : (isSuccess ? 'SUCCESS' : 'FAILED'))}`;
 
     let evidenceHash = '';
     try {
@@ -1081,11 +1084,13 @@ export const SecurityProvider = ({ children }) => {
       evidenceHash = Array.from(rawPayload).reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) >>> 0, 0).toString(16).padStart(64, '0');
     }
 
-    const eventId = isLockout
-      ? `EVT-BF-${Date.now().toString().slice(-4)}`
-      : isSuccess
-        ? `EVT-AUTH-${Date.now().toString().slice(-4)}`
-        : `EVT-FAIL-${Date.now().toString().slice(-4)}`;
+    const eventId = isHighRiskBlocked
+      ? `EVT-RISK-HIGH-${Date.now().toString().slice(-4)}`
+      : isLockout
+        ? `EVT-BF-${Date.now().toString().slice(-4)}`
+        : isSuccess
+          ? `EVT-AUTH-${Date.now().toString().slice(-4)}`
+          : `EVT-FAIL-${Date.now().toString().slice(-4)}`;
 
     const newEvent = {
       id: eventId,
@@ -1096,36 +1101,40 @@ export const SecurityProvider = ({ children }) => {
       process_name: 'lsass.exe / LogonUI.exe',
       parent_process_id: 648,
       parent_process: 'winlogon.exe',
-      event_type: isLockout ? 'brute_force' : (isSuccess ? 'user_login' : 'login_failure'),
-      event_description: isLockout
-        ? `[ACCOUNT KNOCKED OUT] 3 consecutive failed authentication attempts detected for ${username} (${employeeId}) from external IP ${ipAddress}. 15-minute defensive account knockout engaged.`
-        : isSuccess
-          ? `Interactive user session authenticated for ${username} (${employeeId}) on ${deviceName} from ${ipAddress}.`
-          : `Authentication failure (Attempt ${attemptNumber}/3) for ${username} on ${deviceName} from IP ${ipAddress}.`,
-      severity: isLockout ? 'critical' : (isSuccess ? 'info' : (attemptNumber >= 2 ? 'high' : 'medium')),
-      mitre_id: isLockout ? 'T1110' : (isSuccess ? 'T1078' : 'T1110.001'),
-      mitre_name: isLockout ? 'Brute Force: Password Guessing' : (isSuccess ? 'Valid Accounts' : 'Password Guessing Attempt'),
-      mitre_tactic: isLockout ? 'Credential Access' : 'Initial Access',
-      stage: isLockout ? 1 : (isSuccess ? 0 : 1),
+      event_type: isHighRiskBlocked ? 'suspicious_login' : (isLockout ? 'brute_force' : (isSuccess ? 'user_login' : 'login_failure')),
+      event_description: isHighRiskBlocked
+        ? `[AI ANOMALY DETECTION] High-risk login attempt intercepted for ${username} (${employeeId}) from ${ipAddress} on ${deviceName}. Risk Score: ${riskScore}/100. Access restricted and SOC alerted.`
+        : isLockout
+          ? `[ACCOUNT KNOCKED OUT] 3 consecutive failed authentication attempts detected for ${username} (${employeeId}) from external IP ${ipAddress}. 15-minute defensive account knockout engaged.`
+          : isSuccess
+            ? `Interactive user session authenticated for ${username} (${employeeId}) on ${deviceName} from ${ipAddress} (Risk Score: ${riskScore}/100 - LOW).`
+            : `Authentication failure (Attempt ${attemptNumber}/3) for ${username} on ${deviceName} from IP ${ipAddress}.`,
+      severity: isHighRiskBlocked || isLockout ? 'critical' : (isSuccess ? 'info' : (attemptNumber >= 2 ? 'high' : 'medium')),
+      mitre_id: isHighRiskBlocked ? 'T1078' : (isLockout ? 'T1110' : (isSuccess ? 'T1078' : 'T1110.001')),
+      mitre_name: isHighRiskBlocked ? 'Valid Accounts: High-Risk Access Attempt' : (isLockout ? 'Brute Force: Password Guessing' : (isSuccess ? 'Valid Accounts' : 'Password Guessing Attempt')),
+      mitre_tactic: isHighRiskBlocked ? 'Initial Access' : (isLockout ? 'Credential Access' : 'Initial Access'),
+      stage: isHighRiskBlocked || isLockout ? 1 : (isSuccess ? 0 : 1),
       evidence_hash: evidenceHash,
-      status: isLockout ? 'detected' : 'logged',
+      status: isHighRiskBlocked || isLockout ? 'detected' : 'logged',
       source_ip: ipAddress,
       destination_ip: '10.0.2.14',
       username: username,
       why_flagged: {
-        score: isLockout ? 95 : (attemptNumber === 2 ? 65 : 40),
+        score: isHighRiskBlocked ? riskScore : (isLockout ? 95 : (attemptNumber === 2 ? 65 : 40)),
         baseline: 'Corporate subnet (10.0.2.x), 0 failures, standard business hours',
-        signals: isLockout
-          ? [
-              { signal: 'Adversary External IP (198.51.100.44)', weight: 35 },
-              { signal: 'Velocity Anomaly (3 failures < 60s)', weight: 30 },
-              { signal: 'Exceeded Maximum Failed Authentication Threshold', weight: 20 },
-              { signal: 'High Risk Brute Force Pattern (T1110)', weight: 10 }
-            ]
-          : [
-              { signal: 'External Source IP', weight: 25 },
-              { signal: `Authentication Failure #${attemptNumber}`, weight: 20 }
-            ]
+        signals: isHighRiskBlocked && riskSignals && riskSignals.length > 0
+          ? riskSignals
+          : isLockout
+            ? [
+                { signal: 'Adversary External IP (198.51.100.44)', weight: 35 },
+                { signal: 'Velocity Anomaly (3 failures < 60s)', weight: 30 },
+                { signal: 'Exceeded Maximum Failed Authentication Threshold', weight: 20 },
+                { signal: 'High Risk Brute Force Pattern (T1110)', weight: 10 }
+              ]
+            : [
+                { signal: 'External Source IP', weight: 25 },
+                { signal: `Authentication Failure #${attemptNumber}`, weight: 20 }
+              ]
       }
     };
 
@@ -1136,7 +1145,7 @@ export const SecurityProvider = ({ children }) => {
       records: [newEvent, ...(prev?.records || [])]
     }));
 
-    if (isLockout) {
+    if (isHighRiskBlocked || isLockout) {
       setStats(prev => ({
         ...prev,
         total_events: (prev?.total_events || 0) + 1,
@@ -1145,7 +1154,7 @@ export const SecurityProvider = ({ children }) => {
         overall_status: 'CRITICAL_THREAT'
       }));
 
-      // Update Attack Graph with knockout node and edge
+      // Update Attack Graph with anomaly / knockout node and edge
       setAttackGraph(prev => {
         const prevGraph = prev || INITIAL_ATTACK_GRAPH;
         const nodes = [...(prevGraph.nodes || [])];
@@ -1157,7 +1166,9 @@ export const SecurityProvider = ({ children }) => {
           attackerNode.data = {
             ...attackerNode.data,
             visual_state: 'malicious-simulation',
-            details: `Adversary origin [198.51.100.44] executed 3 rapid brute-force attempts on ${username}. Triggered T1110 knockout.`,
+            details: isHighRiskBlocked
+              ? `Adversary origin [${ipAddress}] intercepted by AI Anomaly Detection Engine (Risk Score: ${riskScore}/100). Access restricted.`
+              : `Adversary origin [198.51.100.44] executed 3 rapid brute-force attempts on ${username}. Triggered T1110 knockout.`,
             last_seen: nowStr
           };
         }
@@ -1167,9 +1178,11 @@ export const SecurityProvider = ({ children }) => {
         if (userNode) {
           userNode.data = {
             ...userNode.data,
-            label: `${username} [KNOCKED OUT]`,
+            label: isHighRiskBlocked ? `${username} [ACCESS RESTRICTED]` : `${username} [KNOCKED OUT]`,
             visual_state: 'contained',
-            details: `Account temporarily locked out for 15 minutes following 3 consecutive authentication failures. Defended by PloyWeb SOC.`,
+            details: isHighRiskBlocked
+              ? `Authentication blocked by AI Anomaly Risk Engine (Score: ${riskScore}/100). Defensive hold engaged.`
+              : `Account temporarily locked out for 15 minutes following 3 consecutive authentication failures. Defended by PloyWeb SOC.`,
             last_seen: nowStr
           };
         }
@@ -1177,14 +1190,18 @@ export const SecurityProvider = ({ children }) => {
         // Update Edge 1 connecting attacker to user
         let edge1 = edges.find(e => e.id === 'edge-1' || (e.source === 'node-attacker-198.51.100.44' && (e.target === `node-user-${username}` || e.target === 'node-user-david.webb')));
         if (edge1) {
-          edge1.label = 'Stage 1: T1110 Brute-Force Lockout (3 Failures) [OBSERVED • 100%]';
+          edge1.label = isHighRiskBlocked
+            ? `Stage 1: AI Anomaly Intercept (Score: ${riskScore}/100) [OBSERVED • 100%]`
+            : 'Stage 1: T1110 Brute-Force Lockout (3 Failures) [OBSERVED • 100%]';
           edge1.data = {
             ...edge1.data,
             severity: 'critical',
-            mitre_id: 'T1110',
+            mitre_id: isHighRiskBlocked ? 'T1078' : 'T1110',
             confidence: 1.0,
             relationship_nature: 'observed',
-            details: '3 consecutive authentication failures triggered automated 15-minute account knockout.'
+            details: isHighRiskBlocked
+              ? `High-risk anomaly score (${riskScore}/100) triggered defensive restriction.`
+              : '3 consecutive authentication failures triggered automated 15-minute account knockout.'
           };
         }
 
@@ -1196,9 +1213,11 @@ export const SecurityProvider = ({ children }) => {
       });
 
       setActiveAlert({
-        id: 'ALERT-BF-LOCKOUT',
-        title: 'ACCOUNT KNOCKOUT ENFORCED (T1110)',
-        description: `Account '${username}' knocked out for 15 minutes after 3 failed login attempts on ${deviceName} from ${ipAddress}. NetworkX Attack Graph updated.`
+        id: isHighRiskBlocked ? 'ALERT-HIGH-RISK-ACCESS' : 'ALERT-BF-LOCKOUT',
+        title: isHighRiskBlocked ? 'AI ANOMALY RISK: HIGH-RISK ACCESS RESTRICTED' : 'ACCOUNT KNOCKOUT ENFORCED (T1110)',
+        description: isHighRiskBlocked
+          ? `Interactive authentication for '${username}' from ${ipAddress} scored ${riskScore}/100 (HIGH RISK). Access restricted; SOC incident raised.`
+          : `Account '${username}' knocked out for 15 minutes after 3 failed login attempts on ${deviceName} from ${ipAddress}. NetworkX Attack Graph updated.`
       });
     }
 

@@ -18,9 +18,11 @@ import {
   RefreshCw,
   Server,
   Zap,
-  Radio
+  Radio,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-import { useAuth, DEMO_ADMINS, DEMO_EMPLOYEES } from '../context/AuthContext';
+import { useAuth, DEMO_ADMINS, DEMO_EMPLOYEES, evaluateLoginRisk } from '../context/AuthContext';
 import { useSecurity } from '../context/SecurityContext';
 
 export const LoginPage = ({ onLoginSuccess }) => {
@@ -37,6 +39,15 @@ export const LoginPage = ({ onLoginSuccess }) => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successBanner, setSuccessBanner] = useState(null);
+
+  // AI-Assisted Risk Engine Simulation State
+  const [riskScenario, setRiskScenario] = useState('medium'); // 'low' | 'medium' | 'high' | 'custom'
+  const [simulatedIP, setSimulatedIP] = useState('198.51.100.44');
+  const [simulatedDevice, setSimulatedDevice] = useState('WS-ENGINEERING-07');
+  const [isOddHour, setIsOddHour] = useState(false);
+  const [isMaliciousIP, setIsMaliciousIP] = useState(false);
+  const [isUnregisteredDevice, setIsUnregisteredDevice] = useState(false);
+  const [showSignalCustomizer, setShowSignalCustomizer] = useState(false);
 
   // 3-Attempt Lockout State (Knockout Engine)
   const [failedAttempts, setFailedAttempts] = useState(() => {
@@ -59,6 +70,16 @@ export const LoginPage = ({ onLoginSuccess }) => {
   // MFA Challenge State
   const [mfaChallenge, setMfaChallenge] = useState(null);
   const [mfaCode, setMfaCode] = useState('');
+
+  // Live Risk Calculation
+  const currentRisk = evaluateLoginRisk({
+    ipAddress: simulatedIP,
+    deviceName: simulatedDevice,
+    isOddHour,
+    failedAttempts,
+    isMaliciousIP,
+    isUnregisteredDevice
+  });
 
   // Real-time SHA-256 Digest Calculation
   useEffect(() => {
@@ -107,6 +128,38 @@ export const LoginPage = ({ onLoginSuccess }) => {
     return () => clearInterval(timer);
   }, [isLocked, lockoutTimer]);
 
+  const applyScenario = (scenario) => {
+    setRiskScenario(scenario);
+    setErrorMsg(null);
+    setMfaChallenge(null);
+
+    if (scenario === 'low') {
+      setSimulatedIP('10.0.2.14');
+      setSimulatedDevice('WS-ENGINEERING-07');
+      setIsOddHour(false);
+      setIsMaliciousIP(false);
+      setIsUnregisteredDevice(false);
+      setSuccessBanner('Low Risk Scenario armed: Corporate subnet (10.0.2.14), known MDM device, business hours.');
+      setTimeout(() => setSuccessBanner(null), 3000);
+    } else if (scenario === 'medium') {
+      setSimulatedIP('198.51.100.44');
+      setSimulatedDevice('WS-ENGINEERING-07');
+      setIsOddHour(false);
+      setIsMaliciousIP(false);
+      setIsUnregisteredDevice(false);
+      setSuccessBanner('Medium Risk Scenario armed: Unseen external IP (198.51.100.44). Step-Up MFA will trigger.');
+      setTimeout(() => setSuccessBanner(null), 3000);
+    } else if (scenario === 'high') {
+      setSimulatedIP('185.220.101.5');
+      setSimulatedDevice('UNKNOWN-MAC-X1');
+      setIsOddHour(true);
+      setIsMaliciousIP(true);
+      setIsUnregisteredDevice(true);
+      setSuccessBanner('High Risk Scenario armed: External Tor node (185.220.101.5), unmanaged device, off-hours. Access will be restricted.');
+      setTimeout(() => setSuccessBanner(null), 3000);
+    }
+  };
+
   const handleRegister = async (e) => {
     e?.preventDefault();
     if (!username || !password || !regFullName || !regEmpId) {
@@ -150,9 +203,21 @@ export const LoginPage = ({ onLoginSuccess }) => {
     setIsAuthenticating(true);
 
     try {
-      const res = await loginWithCredentials(username, password, "198.51.100.44", "WS-ENGINEERING-07");
+      const res = await loginWithCredentials(
+        username,
+        password,
+        simulatedIP,
+        simulatedDevice,
+        {
+          isOddHour,
+          isMaliciousIP,
+          isUnregisteredDevice,
+          failedAttempts
+        }
+      );
+
       if (res.success) {
-        // Successful login
+        // LOW RISK: Direct Access Allowed
         setFailedAttempts(0);
         sessionStorage.removeItem('ployweb_failed_attempts');
         sessionStorage.removeItem('ployweb_is_locked');
@@ -162,20 +227,41 @@ export const LoginPage = ({ onLoginSuccess }) => {
           recordAuthTelemetryEvent({
             username,
             employeeId: username.startsWith('EMP') ? username : (portalType === 'admin' ? 'EMP-001' : 'EMP-041'),
-            ipAddress: "198.51.100.44",
-            deviceName: "WS-ENGINEERING-07",
+            ipAddress: simulatedIP,
+            deviceName: simulatedDevice,
             attemptNumber: failedAttempts + 1,
             isSuccess: true,
-            isLockout: false
+            isLockout: false,
+            riskScore: res.risk_score || currentRisk.score,
+            riskSignals: currentRisk.signals
           });
         }
 
         if (onLoginSuccess) onLoginSuccess();
       } else if (res.mfa_required) {
+        // MEDIUM RISK: Step-up MFA Required
         setMfaChallenge(res);
         setMfaCode(res.simulated_otp || '');
+      } else if (res.is_high_risk) {
+        // HIGH RISK: Access Restricted & Admin Alerted
+        if (recordAuthTelemetryEvent) {
+          recordAuthTelemetryEvent({
+            username,
+            employeeId: username.startsWith('EMP') ? username : (portalType === 'admin' ? 'EMP-001' : 'EMP-041'),
+            ipAddress: simulatedIP,
+            deviceName: simulatedDevice,
+            attemptNumber: 1,
+            isSuccess: false,
+            isLockout: false,
+            isHighRiskBlocked: true,
+            riskScore: res.risk_score || currentRisk.score,
+            riskSignals: res.risk_signals || currentRisk.signals,
+            failureReason: 'AI Anomaly Engine High Risk Threshold (>= 65 pts)'
+          });
+        }
+        setErrorMsg(res.error || `ACCESS RESTRICTED: AI Anomaly Detection Engine flagged this authentication as HIGH RISK (${res.risk_score || currentRisk.score}/100). Security Operations Center notified.`);
       } else {
-        // Failed attempt: increment attempt counter
+        // Failed attempt: credentials mismatch
         const newFailCount = failedAttempts + 1;
         setFailedAttempts(newFailCount);
         sessionStorage.setItem('ployweb_failed_attempts', String(newFailCount));
@@ -187,30 +273,28 @@ export const LoginPage = ({ onLoginSuccess }) => {
           sessionStorage.setItem('ployweb_is_locked', 'true');
           sessionStorage.setItem('ployweb_lockout_seconds', '900');
 
-          // Ingest Lockout Incident into Correlation Engine & Attack Graph
           if (recordAuthTelemetryEvent) {
             recordAuthTelemetryEvent({
               username,
               employeeId: username.startsWith('EMP') ? username : (portalType === 'admin' ? 'EMP-001' : 'EMP-041'),
-              ipAddress: "198.51.100.44",
-              deviceName: "WS-ENGINEERING-07",
+              ipAddress: simulatedIP,
+              deviceName: simulatedDevice,
               attemptNumber: 3,
               isSuccess: false,
               isLockout: true,
-              failureReason: "3 consecutive authentication failures reached threshold"
+              failureReason: '3 consecutive authentication failures reached threshold'
             });
           }
 
           setErrorMsg('CRITICAL SECURITY KNOCKOUT: 3 consecutive failed login attempts detected on WS-ENGINEERING-07. Account temporarily locked for 15 minutes to contain potential brute-force intrusion (MITRE ATT&CK T1110). High-priority security incident raised to SOC.');
         } else {
-          // Failure 1 or 2
           const remaining = 3 - newFailCount;
           if (recordAuthTelemetryEvent) {
             recordAuthTelemetryEvent({
               username,
               employeeId: username.startsWith('EMP') ? username : (portalType === 'admin' ? 'EMP-001' : 'EMP-041'),
-              ipAddress: "198.51.100.44",
-              deviceName: "WS-ENGINEERING-07",
+              ipAddress: simulatedIP,
+              deviceName: simulatedDevice,
               attemptNumber: newFailCount,
               isSuccess: false,
               isLockout: false,
@@ -222,6 +306,38 @@ export const LoginPage = ({ onLoginSuccess }) => {
       }
     } catch (err) {
       setErrorMsg('Authentication engine unreachable. Please try again.');
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleVerifyMFA = async (e) => {
+    e?.preventDefault();
+    if (!mfaCode || !mfaChallenge) return;
+    setIsAuthenticating(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await verifyMFA(mfaChallenge.session_id, mfaCode);
+      if (res.success) {
+        if (recordAuthTelemetryEvent) {
+          recordAuthTelemetryEvent({
+            username,
+            employeeId: username.startsWith('EMP') ? username : 'EMP-041',
+            ipAddress: simulatedIP,
+            deviceName: simulatedDevice,
+            attemptNumber: 1,
+            isSuccess: true,
+            isLockout: false,
+            riskScore: mfaChallenge.risk_score || currentRisk.score,
+            riskSignals: mfaChallenge.risk_signals || currentRisk.signals,
+            failureReason: 'MFA Step-Up Verified Successfully'
+          });
+        }
+        if (onLoginSuccess) onLoginSuccess();
+      } else {
+        setErrorMsg(res.error || 'Invalid 6-digit MFA verification code.');
+      }
     } finally {
       setIsAuthenticating(false);
     }
@@ -252,8 +368,8 @@ export const LoginPage = ({ onLoginSuccess }) => {
       recordAuthTelemetryEvent({
         username: 'david.webb',
         employeeId: 'EMP-041',
-        ipAddress: '198.51.100.44',
-        deviceName: 'WS-ENGINEERING-07',
+        ipAddress: simulatedIP,
+        deviceName: simulatedDevice,
         attemptNumber: 1,
         isSuccess: false,
         isLockout: false
@@ -267,8 +383,8 @@ export const LoginPage = ({ onLoginSuccess }) => {
       recordAuthTelemetryEvent({
         username: 'david.webb',
         employeeId: 'EMP-041',
-        ipAddress: '198.51.100.44',
-        deviceName: 'WS-ENGINEERING-07',
+        ipAddress: simulatedIP,
+        deviceName: simulatedDevice,
         attemptNumber: 2,
         isSuccess: false,
         isLockout: false
@@ -288,8 +404,8 @@ export const LoginPage = ({ onLoginSuccess }) => {
       recordAuthTelemetryEvent({
         username: 'david.webb',
         employeeId: 'EMP-041',
-        ipAddress: '198.51.100.44',
-        deviceName: 'WS-ENGINEERING-07',
+        ipAddress: simulatedIP,
+        deviceName: simulatedDevice,
         attemptNumber: 3,
         isSuccess: false,
         isLockout: true,
@@ -300,24 +416,6 @@ export const LoginPage = ({ onLoginSuccess }) => {
     setSuccessBanner(null);
     setErrorMsg('CRITICAL SECURITY KNOCKOUT: 3 consecutive failed login attempts detected on WS-ENGINEERING-07. Account temporarily locked for 15 minutes to contain brute-force intrusion (MITRE T1110). Attack Graph updated with incident node.');
     setSimulatingLockout(false);
-  };
-
-  const handleVerifyMFA = async (e) => {
-    e?.preventDefault();
-    if (!mfaCode || !mfaChallenge) return;
-    setIsAuthenticating(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await verifyMFA(mfaChallenge.session_id, mfaCode);
-      if (res.success) {
-        if (onLoginSuccess) onLoginSuccess();
-      } else {
-        setErrorMsg(res.error || 'Invalid verification code.');
-      }
-    } finally {
-      setIsAuthenticating(false);
-    }
   };
 
   const handleQuickPersonaLogin = (key) => {
@@ -398,25 +496,216 @@ export const LoginPage = ({ onLoginSuccess }) => {
 
         {/* Content Area */}
         <div className="p-5 sm:p-6 space-y-4">
-          {/* Real-time Telemetry Ingestion Badge */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-black/50 border border-cyan-500/20 text-[10px] font-mono text-slate-400">
-            <div className="flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse flex-shrink-0" />
-              <span>Client IP: <strong className="text-cyan-300">198.51.100.44</strong> (Monitored)</span>
+          {/* AI-Assisted Risk-Based Access Decision Panel (Core Demo Showcase) */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-b from-[#0c1424] to-[#070b14] border border-cyan-500/30 space-y-3 font-mono">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  AI-Assisted Access Risk Decision
+                </span>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-all ${
+                currentRisk.riskLevel === 'HIGH'
+                  ? 'bg-red-950 text-red-300 border-red-500/70 shadow-[0_0_10px_rgba(239,68,68,0.4)] animate-pulse'
+                  : currentRisk.riskLevel === 'MEDIUM'
+                    ? 'bg-amber-950 text-amber-300 border-amber-500/70 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                    : 'bg-emerald-950 text-emerald-300 border-emerald-500/70 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+              }`}>
+                {currentRisk.riskLevel} RISK • {currentRisk.score}/100 PTS
+              </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Server className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-              <span>Endpoint: <strong className="text-slate-200">WS-ENGINEERING-07</strong></span>
+
+            {/* Dynamic AI Risk Score Gauge */}
+            <div className="space-y-1">
+              <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    currentRisk.riskLevel === 'HIGH'
+                      ? 'bg-gradient-to-r from-amber-500 to-red-500'
+                      : currentRisk.riskLevel === 'MEDIUM'
+                        ? 'bg-gradient-to-r from-emerald-500 to-amber-500'
+                        : 'bg-emerald-500'
+                  }`}
+                  style={{ width: `${currentRisk.score}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[9px] text-slate-400 font-sans">
+                <span className={currentRisk.riskLevel === 'LOW' ? 'text-emerald-400 font-bold' : ''}>
+                  0 - 34: Low (Allow Direct Login)
+                </span>
+                <span className={currentRisk.riskLevel === 'MEDIUM' ? 'text-amber-400 font-bold' : ''}>
+                  35 - 64: Medium (Require Step-Up MFA)
+                </span>
+                <span className={currentRisk.riskLevel === 'HIGH' ? 'text-red-400 font-bold' : ''}>
+                  65 - 100: High (Restrict Access & Alert Admin)
+                </span>
+              </div>
             </div>
+
+            {/* 3 Interactive Quick-Scenario Buttons */}
+            <div className="space-y-1 pt-1">
+              <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider flex items-center justify-between">
+                <span>Select Test Risk Scenario:</span>
+                <button
+                  type="button"
+                  onClick={() => setShowSignalCustomizer(!showSignalCustomizer)}
+                  className="text-cyan-400 hover:text-cyan-300 text-[10px] flex items-center gap-0.5 underline font-normal"
+                >
+                  <span>{showSignalCustomizer ? 'Hide Signal Weights' : 'Inspect Signal Weights'}</span>
+                  {showSignalCustomizer ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => applyScenario('low')}
+                  className={`py-2 px-2 rounded-lg text-[10px] font-bold border transition-all flex flex-col items-center justify-center text-center ${
+                    riskScenario === 'low'
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500'
+                      : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🟢 Low Risk</span>
+                  <span className="text-[9px] font-normal opacity-80 mt-0.5">Allow Direct</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyScenario('medium')}
+                  className={`py-2 px-2 rounded-lg text-[10px] font-bold border transition-all flex flex-col items-center justify-center text-center ${
+                    riskScenario === 'medium'
+                      ? 'bg-amber-950 text-amber-300 border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-500'
+                      : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🟡 Medium Risk</span>
+                  <span className="text-[9px] font-normal opacity-80 mt-0.5">Requires MFA</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyScenario('high')}
+                  className={`py-2 px-2 rounded-lg text-[10px] font-bold border transition-all flex flex-col items-center justify-center text-center ${
+                    riskScenario === 'high'
+                      ? 'bg-red-950 text-red-300 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.3)] ring-1 ring-red-500'
+                      : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🔴 High Risk</span>
+                  <span className="text-[9px] font-normal opacity-80 mt-0.5">Restrict & Alert</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable Signal Breakdown & Checkbox Controls */}
+            {showSignalCustomizer && (
+              <div className="p-3 rounded-lg bg-black/60 border border-white/10 space-y-2 text-[10px] animate-fadeIn">
+                <div className="flex items-center justify-between text-slate-400 font-bold uppercase pb-1 border-b border-white/5">
+                  <span>Behavioral Telemetry Signals:</span>
+                  <span>Contribution</span>
+                </div>
+
+                <div className="space-y-1.5 font-sans">
+                  <label className="flex items-center justify-between text-slate-300 cursor-pointer">
+                    <span className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={!simulatedIP.startsWith('10.0.2.') || isMaliciousIP}
+                        onChange={(e) => {
+                          setRiskScenario('custom');
+                          if (e.target.checked) {
+                            setSimulatedIP('198.51.100.44');
+                          } else {
+                            setSimulatedIP('10.0.2.14');
+                            setIsMaliciousIP(false);
+                          }
+                        }}
+                        className="rounded accent-cyan-500"
+                      />
+                      <span>New / Untrusted IP Address ({simulatedIP})</span>
+                    </span>
+                    <span className="text-cyan-400 font-mono font-bold">{isMaliciousIP ? '+40' : '+30'} pts</span>
+                  </label>
+
+                  <label className="flex items-center justify-between text-slate-300 cursor-pointer">
+                    <span className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={isUnregisteredDevice || !simulatedDevice.includes('WS-ENGINEERING')}
+                        onChange={(e) => {
+                          setRiskScenario('custom');
+                          setIsUnregisteredDevice(e.target.checked);
+                          setSimulatedDevice(e.target.checked ? 'UNKNOWN-MAC-X1' : 'WS-ENGINEERING-07');
+                        }}
+                        className="rounded accent-cyan-500"
+                      />
+                      <span>New / Unregistered Device ({simulatedDevice})</span>
+                    </span>
+                    <span className="text-cyan-400 font-mono font-bold">+25 pts</span>
+                  </label>
+
+                  <label className="flex items-center justify-between text-slate-300 cursor-pointer">
+                    <span className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={isOddHour}
+                        onChange={(e) => {
+                          setRiskScenario('custom');
+                          setIsOddHour(e.target.checked);
+                        }}
+                        className="rounded accent-cyan-500"
+                      />
+                      <span>Odd / Off-Hours Login Window (00:00 - 05:30 UTC)</span>
+                    </span>
+                    <span className="text-cyan-400 font-mono font-bold">+20 pts</span>
+                  </label>
+
+                  <label className="flex items-center justify-between text-slate-300 cursor-pointer">
+                    <span className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={failedAttempts > 0}
+                        onChange={(e) => {
+                          setRiskScenario('custom');
+                          setFailedAttempts(e.target.checked ? 1 : 0);
+                        }}
+                        className="rounded accent-cyan-500"
+                      />
+                      <span>Prior Failed Authentication History ({failedAttempts} failure{failedAttempts === 1 ? '' : 's'})</span>
+                    </span>
+                    <span className="text-cyan-400 font-mono font-bold">{failedAttempts >= 2 ? '+25' : '+15'} pts</span>
+                  </label>
+                </div>
+
+                <div className="flex justify-between text-slate-400 pt-1.5 border-t border-white/5 font-mono">
+                  <span className="font-bold">Calculated Action:</span>
+                  <span className={`font-bold ${
+                    currentRisk.riskLevel === 'HIGH'
+                      ? 'text-red-400'
+                      : currentRisk.riskLevel === 'MEDIUM'
+                        ? 'text-amber-400'
+                        : 'text-emerald-400'
+                  }`}>
+                    {currentRisk.actionRequired === 'ALLOW_DIRECT'
+                      ? '✓ Allow Direct Session'
+                      : currentRisk.actionRequired === 'REQUIRE_MFA'
+                        ? '⚡ Challenge via Step-Up MFA'
+                        : '⛔ Restrict Access & Alert SOC Admin'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Interactive 3-Attempt Counter Status Bar */}
-          <div className="p-3 rounded-xl bg-black/60 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono">
+          <div className="p-3 rounded-xl bg-black/60 border border-slate-800 space-y-2 font-mono">
+            <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck className={`w-4 h-4 ${failedAttempts > 0 ? 'text-amber-400' : 'text-emerald-400'}`} />
                 <span className="text-slate-300 font-bold uppercase tracking-wider">
-                  Authentication Attempts:
+                  Consecutive Attempts Counter:
                 </span>
               </div>
               <span className={`text-[11px] font-bold ${
@@ -466,7 +755,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
             <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/60 text-emerald-200 text-xs font-mono flex items-start gap-2.5 animate-fadeIn">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold block">Action Confirmed:</span>
+                <span className="font-bold block">Status Notice:</span>
                 <span className="text-[11px] leading-relaxed">{successBanner}</span>
               </div>
             </div>
@@ -482,7 +771,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
               <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isLocked ? 'text-red-400 animate-bounce' : 'text-amber-400'}`} />
               <div className="space-y-1">
                 <span className="font-bold block">
-                  {isLocked ? 'DEFENSIVE KNOCKOUT ACTIVE (MITRE T1110):' : 'Authentication Warning:'}
+                  {isLocked ? 'DEFENSIVE KNOCKOUT ACTIVE (MITRE T1110):' : 'Authentication Notice:'}
                 </span>
                 <span className="text-[11px] leading-relaxed block">{errorMsg}</span>
               </div>
@@ -505,9 +794,9 @@ export const LoginPage = ({ onLoginSuccess }) => {
               <div className="p-2.5 rounded bg-black/60 border border-red-500/30 text-[10px] text-slate-300 space-y-1">
                 <div className="text-red-300 font-bold flex items-center gap-1.5">
                   <Zap className="w-3.5 h-3.5" />
-                  <span>Autonomous Defensive Action Executed</span>
+                  <span>Autonomous Defensive Hold Executed</span>
                 </div>
-                <div>• Source IP <strong>198.51.100.44</strong> flagged for high-velocity credential guessing.</div>
+                <div>• Source IP <strong>{simulatedIP}</strong> flagged for high-velocity credential guessing.</div>
                 <div>• Injected high-severity event into SOC Event Ledger & Evidence Hashes.</div>
                 <div>• Updated NetworkX Attack Graph with containment state.</div>
               </div>
@@ -524,22 +813,24 @@ export const LoginPage = ({ onLoginSuccess }) => {
             </div>
           )}
 
-          {/* MFA Challenge Screen (if triggered by Risk Engine) */}
+          {/* MFA Challenge Screen (Medium Risk Tier) */}
           {mfaChallenge ? (
             <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/50 space-y-3 font-mono animate-fadeIn">
               <div className="flex items-center gap-2">
                 <Smartphone className="w-5 h-5 text-amber-400" />
                 <h3 className="text-xs font-bold text-amber-200 uppercase">
-                  Step-Up MFA Challenge Triggered
+                  Step-Up Multi-Factor Authentication Required
                 </h3>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                {mfaChallenge.message}
+                {mfaChallenge.message || 'Elevated risk signals detected. Please complete 6-digit MFA challenge to authorize session.'}
               </p>
 
-              {/* Explainable Signals */}
-              <div className="p-2.5 rounded bg-black/40 border border-white/5 space-y-1 text-[10px]">
-                <span className="text-slate-400 font-bold block uppercase">Risk Engine Signals (Score: {mfaChallenge.risk_score} pts):</span>
+              {/* Risk Signals Triggering MFA */}
+              <div className="p-2.5 rounded bg-black/50 border border-white/5 space-y-1 text-[10px]">
+                <span className="text-slate-400 font-bold block uppercase">
+                  Signals Evaluated (Score: {mfaChallenge.risk_score} pts):
+                </span>
                 {(mfaChallenge.risk_signals || []).map((s, idx) => (
                   <div key={idx} className="flex justify-between text-amber-300">
                     <span>• {s.signal}</span>
@@ -551,13 +842,13 @@ export const LoginPage = ({ onLoginSuccess }) => {
               {/* Simulated Demo OTP Box */}
               <div className="p-3 rounded-lg bg-emerald-950/50 border border-emerald-500/40 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-emerald-300 block">SIMULATED OTP (DEMO MODE):</span>
+                  <span className="text-[10px] text-emerald-300 block">SIMULATED ONE-TIME PASSWORD:</span>
                   <span className="text-base font-extrabold text-white tracking-widest">{mfaChallenge.simulated_otp}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMfaCode(mfaChallenge.simulated_otp)}
-                  className="px-2 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[10px]"
+                  className="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[10px] transition-colors"
                 >
                   Auto-Fill OTP
                 </button>
@@ -587,9 +878,10 @@ export const LoginPage = ({ onLoginSuccess }) => {
                   <button
                     type="submit"
                     disabled={isAuthenticating}
-                    className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-lg transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-lg transition-colors flex items-center justify-center gap-2"
                   >
-                    {isAuthenticating ? 'Verifying...' : 'Verify MFA & Complete Login'}
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{isAuthenticating ? 'VERIFYING MFA...' : 'VERIFY MFA & COMPLETE LOGIN'}</span>
                   </button>
                 </div>
               </form>
@@ -743,7 +1035,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
                     </button>
                   </form>
                 ) : (
-                  /* Standard Login Form with Real Hashing & 3-Attempt Guard */
+                  /* Standard Login Form with Real Hashing & Risk-Based Access */
                   <form onSubmit={handleManualLogin} className="space-y-3 font-mono text-xs">
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -856,17 +1148,25 @@ export const LoginPage = ({ onLoginSuccess }) => {
                       className={`w-full py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
                         isLocked
                           ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                          : portalType === 'admin'
-                            ? 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-cyan-500/20'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
+                          : currentRisk.riskLevel === 'HIGH'
+                            ? 'bg-gradient-to-r from-red-600 to-amber-600 hover:brightness-110 text-white shadow-red-500/20'
+                            : currentRisk.riskLevel === 'MEDIUM'
+                              ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/20'
+                              : portalType === 'admin'
+                                ? 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-cyan-500/20'
+                                : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
                       }`}
                     >
                       <span>
                         {isAuthenticating
-                          ? 'AUTHENTICATING TELEMETRY...'
+                          ? 'EVALUATING RISK TELEMETRY...'
                           : isLocked
                             ? `ACCOUNT KNOCKED OUT (${formatTimer(lockoutTimer)})`
-                            : `LOG IN TO ${portalType.toUpperCase()} PORTAL`}
+                            : currentRisk.riskLevel === 'HIGH'
+                              ? `SUBMIT AUTHENTICATION (HIGH RISK: ${currentRisk.score}/100)`
+                              : currentRisk.riskLevel === 'MEDIUM'
+                                ? `SUBMIT AUTHENTICATION (REQUIRES MFA: ${currentRisk.score}/100)`
+                                : `LOG IN DIRECTLY (${currentRisk.score}/100 - LOW RISK)`}
                       </span>
                       <ArrowRight className="w-4 h-4" />
                     </button>

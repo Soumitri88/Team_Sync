@@ -62,6 +62,114 @@ export const DEMO_EMPLOYEES = {
   }
 };
 
+/**
+ * AI-Assisted Risk-Based Access Decision Engine:
+ * Scores authentication attempts from behavioral telemetry signals:
+ *   - New / Untrusted IP Address (+30 or +40 for Malicious Proxy)
+ *   - Unregistered / Unknown Device (+25)
+ *   - Unusual / Off-Hours Window (+20)
+ *   - Prior Failed Attempts Velocity (+15 or +25)
+ *
+ * Classifies risk into 3 tiers:
+ *   - LOW (< 35): Direct Login Allowed
+ *   - MEDIUM (35 - 64): Step-Up MFA Required (Simulated OTP)
+ *   - HIGH (>= 65): Access Restricted & SOC Admin Alerted
+ */
+export function evaluateLoginRisk({
+  ipAddress = "10.0.2.14",
+  deviceName = "WS-ENGINEERING-07",
+  isOddHour = false,
+  failedAttempts = 0,
+  isMaliciousIP = false,
+  isUnregisteredDevice = false
+}) {
+  const signals = [];
+  let score = 0;
+
+  // Signal 1: New / External / Untrusted IP Address
+  const isExternalIP = isMaliciousIP || (!ipAddress.startsWith("10.0.2.") && !ipAddress.startsWith("192.168.1."));
+  if (isMaliciousIP) {
+    score += 40;
+    signals.push({
+      signal: "Malicious Proxy / Tor Node Detected",
+      weight: 40,
+      description: `Source IP ${ipAddress} is cataloged as a known external adversary Tor proxy.`
+    });
+  } else if (isExternalIP) {
+    score += 30;
+    signals.push({
+      signal: "New / Untrusted External IP Address",
+      weight: 30,
+      description: `Source IP ${ipAddress} has no prior historical affinity with user profile.`
+    });
+  }
+
+  // Signal 2: New / Unregistered Device
+  const isUnknownDevice = isUnregisteredDevice || (!deviceName.includes("WS-ENGINEERING") && !deviceName.includes("SRV-"));
+  if (isUnknownDevice) {
+    score += 25;
+    signals.push({
+      signal: "Unregistered / Unknown Device",
+      weight: 25,
+      description: `Device '${deviceName}' lacks corporate MDM cryptographic identity certificate.`
+    });
+  }
+
+  // Signal 3: Odd / Off-Hours Access Window (00:00 - 05:30 UTC)
+  if (isOddHour) {
+    score += 20;
+    signals.push({
+      signal: "Unusual / Off-Hours Login Window",
+      weight: 20,
+      description: `Authentication initiated outside normal business hours (off-peak 00:00 - 05:30 UTC).`
+    });
+  }
+
+  // Signal 4: Prior Failed Attempts Count
+  if (failedAttempts >= 2) {
+    score += 25;
+    signals.push({
+      signal: `Multiple Prior Failed Attempts (${failedAttempts} failures)`,
+      weight: 25,
+      description: `Account has accumulated consecutive failed authentication attempts.`
+    });
+  } else if (failedAttempts === 1) {
+    score += 15;
+    signals.push({
+      signal: "Prior Failed Attempt (1 failure)",
+      weight: 15,
+      description: `Single prior authentication failure recorded within past 5 minutes.`
+    });
+  }
+
+  // Default baseline score for clean internal login
+  if (score === 0) {
+    score = 10;
+  }
+
+  // Determine Tier and Action
+  let riskLevel = "LOW";
+  let actionRequired = "ALLOW_DIRECT";
+
+  if (score >= 65) {
+    riskLevel = "HIGH";
+    actionRequired = "RESTRICT_AND_ALERT";
+  } else if (score >= 35) {
+    riskLevel = "MEDIUM";
+    actionRequired = "REQUIRE_MFA";
+  } else {
+    riskLevel = "LOW";
+    actionRequired = "ALLOW_DIRECT";
+  }
+
+  return {
+    score: Math.min(100, score),
+    riskLevel,
+    actionRequired,
+    signals
+  };
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     // Only resume active session if explicit in current browser session
@@ -88,8 +196,15 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [token, setToken] = useState(() => localStorage.getItem("ployweb_token") || null);
+  const [pendingMfaUser, setPendingMfaUser] = useState(null);
 
-  const loginWithCredentials = async (username, password, ipAddress = "198.51.100.44", deviceName = "WS-ENGINEERING-07") => {
+  const loginWithCredentials = async (
+    username,
+    password,
+    ipAddress = "198.51.100.44",
+    deviceName = "WS-ENGINEERING-07",
+    riskConfig = {}
+  ) => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -115,7 +230,7 @@ export const AuthProvider = ({ children }) => {
       }
       return data;
     } catch (err) {
-      // Client-side offline engine verification
+      // Client-side offline engine verification with AI-assisted risk scoring
       const cleanUser = (username || "").trim().toLowerCase();
       let matched = null;
       let matchedRole = "employee";
@@ -154,12 +269,56 @@ export const AuthProvider = ({ children }) => {
       const isKnownValidPw = validPasswords.includes(password) || (matched && matched.password === password);
 
       if (matched && isKnownValidPw) {
+        // Evaluate AI Risk Signals
+        const riskResult = evaluateLoginRisk({
+          ipAddress,
+          deviceName,
+          ...riskConfig
+        });
+
+        // HIGH RISK: Restrict access and alert SOC
+        if (riskResult.riskLevel === "HIGH") {
+          return {
+            success: false,
+            is_high_risk: true,
+            risk_score: riskResult.score,
+            risk_level: "HIGH",
+            risk_signals: riskResult.signals,
+            user: matched,
+            error: `ACCESS RESTRICTED: AI Anomaly Detection Engine flagged this authentication as HIGH RISK (${riskResult.score}/100). Security Operations Center notified.`
+          };
+        }
+
+        // MEDIUM RISK: Step-up MFA Challenge (Simulated OTP)
+        if (riskResult.riskLevel === "MEDIUM") {
+          const simulatedOtp = String(Math.floor(100000 + Math.random() * 900000));
+          setPendingMfaUser({ user: matched, portal: matchedRole, otp: simulatedOtp });
+          return {
+            success: false,
+            mfa_required: true,
+            session_id: `SESS-MFA-${Date.now()}`,
+            risk_score: riskResult.score,
+            risk_level: "MEDIUM",
+            risk_signals: riskResult.signals,
+            simulated_otp: simulatedOtp,
+            user: matched,
+            message: `Elevated risk signals detected (Score: ${riskResult.score}/100). Step-Up MFA Challenge required.`
+          };
+        }
+
+        // LOW RISK: Direct Access Allowed
         setUser(matched);
         setActivePortal(matchedRole);
         sessionStorage.setItem("ployweb_session_active", "true");
         localStorage.setItem("ployweb_user", JSON.stringify(matched));
         localStorage.setItem("ployweb_active_portal", matchedRole);
-        return { success: true, user: matched, portal: matchedRole };
+        return {
+          success: true,
+          user: matched,
+          portal: matchedRole,
+          risk_score: riskResult.score,
+          risk_level: "LOW"
+        };
       }
 
       return {
@@ -183,6 +342,7 @@ export const AuthProvider = ({ children }) => {
         setToken(data.token);
         const portal = data.user.role === "employee" ? "employee" : "admin";
         setActivePortal(portal);
+        sessionStorage.setItem("ployweb_session_active", "true");
         localStorage.setItem("ployweb_user", JSON.stringify(data.user));
         localStorage.setItem("ployweb_token", data.token);
         localStorage.setItem("ployweb_active_portal", portal);
@@ -190,7 +350,22 @@ export const AuthProvider = ({ children }) => {
       }
       return data;
     } catch (err) {
-      return { success: false, error: "Network error during MFA verification." };
+      // Client-side offline MFA verification
+      if (pendingMfaUser) {
+        if (!code || (pendingMfaUser.otp && pendingMfaUser.otp !== code && code.length !== 6)) {
+          return { success: false, error: "Invalid 6-digit verification code. Please enter the OTP displayed above." };
+        }
+        const userToLogin = pendingMfaUser.user;
+        const portalToSet = pendingMfaUser.portal;
+        setUser(userToLogin);
+        setActivePortal(portalToSet);
+        sessionStorage.setItem("ployweb_session_active", "true");
+        localStorage.setItem("ployweb_user", JSON.stringify(userToLogin));
+        localStorage.setItem("ployweb_active_portal", portalToSet);
+        setPendingMfaUser(null);
+        return { success: true, user: userToLogin, portal: portalToSet };
+      }
+      return { success: false, error: "MFA verification failed. Please try again." };
     }
   };
 
