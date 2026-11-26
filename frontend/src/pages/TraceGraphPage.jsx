@@ -26,7 +26,8 @@ import {
   Clock,
   Layers,
   Download,
-  ShieldAlert
+  ShieldAlert,
+  CheckCircle2
 } from 'lucide-react';
 import { CustomGraphNode } from '../components/CustomGraphNode';
 import { useSecurity } from '../context/SecurityContext';
@@ -40,7 +41,7 @@ const nodeTypes = {
 };
 
 export const TraceGraphPage = ({ onInspectEvidence }) => {
-  const { attackGraph, refreshAll, executeResponseAction, runJudgeDemo } = useSecurity();
+  const { attackGraph, refreshAll, reseedDemo, executeResponseAction, runJudgeDemo } = useSecurity();
   const [whyFlaggedOpen, setWhyFlaggedOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [highlightCriticalOnly, setHighlightCriticalOnly] = useState(false);
@@ -48,6 +49,9 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
   const [telemetryFilter, setTelemetryFilter] = useState('all'); // 'all' | 'observed' | 'inferred'
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [rfInstance, setRfInstance] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshToast, setRefreshToast] = useState(null);
 
   const rawNodes = (attackGraph?.nodes && attackGraph.nodes.length > 0) 
     ? attackGraph.nodes 
@@ -222,6 +226,32 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
     a.click();
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      if (reseedDemo) {
+        await reseedDemo();
+      }
+      await refreshAll();
+      setHighlightCriticalOnly(false);
+      setTypeFilter('all');
+      setTelemetryFilter('all');
+      setSelectedEntity(null);
+      setIsDrawerOpen(false);
+
+      if (rfInstance) {
+        rfInstance.fitView({ padding: 0.2, duration: 600 });
+      }
+
+      setRefreshToast("GraphX Engine Topology & Telemetry Synchronized!");
+      setTimeout(() => setRefreshToast(null), 3000);
+    } catch (err) {
+      console.error('[TraceGraph] Refresh error:', err);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
   return (
     <div className="space-y-3 sm:space-y-4 pb-2 sm:pb-4 flex flex-col h-[560px] sm:h-[calc(100vh-8.5rem)] max-w-7xl mx-auto relative">
       {/* Top Header & GraphX Status */}
@@ -337,13 +367,14 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
             <span className="hidden sm:inline">Download Critical Path</span>
           </button>
 
-          {/* Refresh Graph */}
+          {/* Refresh / Retry Graph */}
           <button
-            onClick={refreshAll}
-            title="Refresh GraphX Engine"
-            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-cyan-400 transition-colors shadow-sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title="Reset & Synchronize GraphX Topology"
+            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-cyan-400 transition-colors shadow-sm disabled:opacity-50"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
         </div>
       </div>
@@ -389,6 +420,19 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
         </div>
       </div>
 
+      {/* Topology Reset & Sync Feedback Toast */}
+      {refreshToast && (
+        <div className="px-3.5 py-2 rounded-xl bg-cyan-950/90 border border-cyan-500/60 text-cyan-200 text-xs font-mono flex items-center justify-between shadow-neon-cyan animate-fadeIn flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+            <span className="font-bold">{refreshToast}</span>
+          </div>
+          <button onClick={() => setRefreshToast(null)} className="text-cyan-400 hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Interactive GraphX Flow Canvas */}
       <div className="relative flex-1 w-full rounded-2xl border border-slate-800 overflow-hidden bg-[#050811] shadow-2xl min-h-[350px]">
         {nodes.length === 0 && (
@@ -412,6 +456,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
           nodeTypes={nodeTypes}
+          onInit={setRfInstance}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           minZoom={0.25}
