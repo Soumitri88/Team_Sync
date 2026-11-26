@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  ShieldAlert, 
-  ShieldCheck, 
-  Network, 
+import {
+  ShieldAlert,
+  ShieldCheck,
+  Network,
   RotateCcw,
   Sparkles,
   ChevronRight,
@@ -70,19 +70,17 @@ export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
     <div className="space-y-4 sm:space-y-6 pb-16 max-w-7xl mx-auto font-mono">
       {/* Cyber SOC Top Banner with Radar Sweep & Status */}
       <div
-        className={`p-4 sm:p-6 rounded-3xl border transition-all relative overflow-hidden backdrop-blur-xl ${
-          isThreat
+        className={`p-4 sm:p-6 rounded-3xl border transition-all relative overflow-hidden backdrop-blur-xl ${isThreat
             ? 'bg-gradient-to-r from-red-950/40 via-slate-900/80 to-slate-950 border-red-500/40 shadow-[0_0_30px_rgba(239,68,68,0.2)]'
             : 'bg-gradient-to-r from-cyan-950/30 via-slate-900/80 to-slate-950 border-slate-800 shadow-[0_0_30px_rgba(6,182,212,0.1)]'
-        } flex flex-col lg:flex-row lg:items-center justify-between gap-4`}
+          } flex flex-col lg:flex-row lg:items-center justify-between gap-4`}
       >
         <div className="flex items-start sm:items-center gap-4 z-10">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
-              isThreat
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${isThreat
                 ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-neon-red'
                 : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-neon-cyan'
-            }`}
+              }`}
           >
             {isThreat ? (
               <ShieldAlert className="w-6 h-6 animate-pulse" />
@@ -93,11 +91,10 @@ export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span
-                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 ${
-                  isThreat
+                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 ${isThreat
                     ? 'bg-red-950 text-red-300 border border-red-500/40 animate-pulse'
                     : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
-                }`}
+                  }`}
               >
                 <Radio className="w-3 h-3 animate-pulse" />
                 {isThreat ? 'ACTIVE THREAT DETECTED' : 'SYSTEM STATUS: PROTECTED'}
@@ -193,9 +190,8 @@ export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Posture:</span>
               <span
-                className={`font-bold uppercase ${
-                  isThreat ? 'text-red-400' : 'text-emerald-400'
-                }`}
+                className={`font-bold uppercase ${isThreat ? 'text-red-400' : 'text-emerald-400'
+                  }`}
               >
                 {isThreat ? 'ELEVATED RISK' : 'NOMINAL (PROTECTED)'}
               </span>
@@ -301,13 +297,12 @@ export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
 
         {/* Live Feedback Toast Banner */}
         {approvalFeedback && (
-          <div className={`p-2.5 rounded-xl border text-[11px] font-mono flex items-center justify-between animate-fadeIn ${
-            approvalFeedback.decision === 'APPROVED'
+          <div className={`p-2.5 rounded-xl border text-[11px] font-mono flex items-center justify-between animate-fadeIn ${approvalFeedback.decision === 'APPROVED'
               ? 'bg-emerald-950/90 border-emerald-500/60 text-emerald-200'
               : approvalFeedback.decision === 'REJECTED'
-              ? 'bg-red-950/90 border-red-500/60 text-red-200'
-              : 'bg-amber-950/90 border-amber-500/60 text-amber-200'
-          }`}>
+                ? 'bg-red-950/90 border-red-500/60 text-red-200'
+                : 'bg-amber-950/90 border-amber-500/60 text-amber-200'
+            }`}>
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 flex-shrink-0" />
               <span>
@@ -328,15 +323,14 @@ export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
             return (
               <div
                 key={req.id}
-                className={`p-3 rounded-xl border transition-all ${
-                  isPending
+                className={`p-3 rounded-xl border transition-all ${isPending
                     ? 'bg-slate-900/90 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
                     : isApproved
-                    ? 'bg-emerald-950/30 border-emerald-500/40 opacity-90'
-                    : isRejected
-                    ? 'bg-red-950/30 border-red-500/40 opacity-80'
-                    : 'bg-purple-950/30 border-purple-500/40 opacity-85'
-                }`}
+                      ? 'bg-emerald-950/30 border-emerald-500/40 opacity-90'
+                      : isRejected
+                        ? 'bg-red-950/30 border-red-500/40 opacity-80'
+                        : 'bg-purple-950/30 border-purple-500/40 opacity-85'
+                  }`}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
                   <div className="space-y-1 flex-1 min-w-0">
@@ -350,15 +344,14 @@ export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
                       <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
                         {req.mitre_id}
                       </span>
-                      <span className={`text-[9px] font-extrabold px-2 py-0.2 rounded uppercase tracking-wider ${
-                        isPending
+                      <span className={`text-[9px] font-extrabold px-2 py-0.2 rounded uppercase tracking-wider ${isPending
                           ? 'bg-amber-500 text-black animate-pulse'
                           : isApproved
-                          ? 'bg-emerald-600 text-white'
-                          : isRejected
-                          ? 'bg-red-600 text-white'
-                          : 'bg-purple-600 text-white'
-                      }`}>
+                            ? 'bg-emerald-600 text-white'
+                            : isRejected
+                              ? 'bg-red-600 text-white'
+                              : 'bg-purple-600 text-white'
+                        }`}>
                         {req.decision}
                       </span>
                     </div>
@@ -518,13 +511,12 @@ export const DashboardPage = ({ onNavigate, onInspectEvidence }) => {
               >
                 <div className="flex items-start sm:items-center gap-2.5 min-w-0">
                   <span
-                    className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase flex-shrink-0 font-mono ${
-                      e.severity === 'critical'
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase flex-shrink-0 font-mono ${e.severity === 'critical'
                         ? 'bg-red-950 text-red-400 border border-red-500/40'
                         : e.severity === 'high'
-                        ? 'bg-amber-950 text-amber-400 border border-amber-500/40'
-                        : 'bg-cyan-950 text-cyan-400 border border-cyan-500/40'
-                    }`}
+                          ? 'bg-amber-950 text-amber-400 border border-amber-500/40'
+                          : 'bg-cyan-950 text-cyan-400 border border-cyan-500/40'
+                      }`}
                   >
                     {e.severity}
                   </span>
