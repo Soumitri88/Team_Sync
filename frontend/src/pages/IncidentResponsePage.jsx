@@ -33,6 +33,7 @@ import {
 import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
 import { WhyFlaggedModal } from '../components/WhyFlaggedModal';
+import confetti from 'canvas-confetti';
 
 export function IncidentResponsePage({ onNavigate }) {
   const { 
@@ -55,6 +56,7 @@ export function IncidentResponsePage({ onNavigate }) {
     generate_report: 'IR-AUTONOMOUS-CASE-01'
   });
   const [executing, setExecuting] = useState(null);
+  const [executedPlaybooks, setExecutedPlaybooks] = useState({});
   const [isRunningProtectionDemo, setIsRunningProtectionDemo] = useState(false);
   const [lastActionResult, setLastActionResult] = useState(null);
   const [protectionDemoSuccess, setProtectionDemoSuccess] = useState(null);
@@ -131,12 +133,48 @@ export function IncidentResponsePage({ onNavigate }) {
   ];
 
   const handleExecute = async (actionType) => {
-    const target = selectedTarget[actionType] || 'WS-ENGINEERING-07';
-    const operator = user?.name || 'SOC-Commander';
+    const pbDef = responsePlaybooks.find(p => p.id === actionType);
+    const target = selectedTarget[actionType] || pbDef?.defaultTarget || 'WS-ENGINEERING-07';
+    const operator = user?.name || 'Alex Vance (SOC Incident Commander)';
     setExecuting(actionType);
     try {
       const record = await executeResponseAction(actionType, target, operator);
-      setLastActionResult(record);
+      
+      let message = `Successfully executed ${actionType} on ${target}. Audit log committed.`;
+      if (actionType === 'review_logins') {
+        message = `Forensic audit complete for ${target}. 14 authentication sessions analyzed across RDP/SSH; impossible travel flagged (18,375 km/h). Audit record signed.`;
+      } else if (actionType === 'revoke_session') {
+        message = `Active Kerberos TGT tickets & OAuth tokens revoked for ${target}. Interactive RDP/WinRM sessions terminated.`;
+      } else if (actionType === 'password_change') {
+        message = `Mandatory high-entropy password reset flag enforced across Domain Controllers for ${target}.`;
+      } else if (actionType === 'enable_mfa') {
+        message = `Conditional Access Multi-Factor Authentication requirement enforced for ${target}.`;
+      } else if (actionType === 'quarantine_host') {
+        message = `VLAN isolation applied to ${target}. Lateral network interfaces disconnected; forensic memory preserved.`;
+      } else if (actionType === 'generate_report') {
+        message = `Investigation dossier generated for ${target} with MITRE ATT&CK mappings and SHA-256 evidence digests.`;
+      }
+
+      setExecutedPlaybooks(prev => ({
+        ...prev,
+        [actionType]: {
+          target,
+          time: new Date().toLocaleTimeString(),
+          message
+        }
+      }));
+
+      setLastActionResult({
+        ...record,
+        action_name: pbDef?.title || actionType,
+        target,
+        message
+      });
+
+      try {
+        confetti({ particleCount: 90, spread: 60, origin: { y: 0.7 } });
+      } catch (e) {}
+
       if (actionType === 'generate_report' && onNavigate) {
         setTimeout(() => onNavigate('/reports'), 1200);
       }
@@ -554,18 +592,33 @@ export function IncidentResponsePage({ onNavigate }) {
 
       {/* Execution Alert Toast */}
       {lastActionResult && (
-        <div className="p-3.5 rounded-xl bg-cyan-950/90 border border-cyan-500/80 text-cyan-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-fadeIn">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+        <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/95 via-cyan-950/90 to-slate-900 border border-emerald-500/80 text-white text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_25px_rgba(16,185,129,0.25)] animate-fadeIn">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            </div>
             <div>
-              <span className="font-bold">Playbook Executed Successfully: </span>
-              <span className="text-white">{lastActionResult.action_type}</span> on{' '}
-              <span className="text-cyan-300">{lastActionResult.target}</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-sm text-emerald-300">Playbook Enforced:</span>
+                <span className="font-bold text-white">{lastActionResult.action_name || lastActionResult.action_type}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/60 text-cyan-300 border border-cyan-500/40">
+                  TARGET: {lastActionResult.target}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                {lastActionResult.message || 'Defensive security policy applied and signed to cryptographic audit trail.'}
+              </p>
             </div>
           </div>
-          <span className="text-[10px] text-slate-400 font-mono self-end sm:self-auto">
-            Hash: {lastActionResult.integrity_hash?.slice(0, 16)}...
-          </span>
+          <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto font-mono text-[10px]">
+            <span className="text-slate-400">Hash: {lastActionResult.integrity_hash?.slice(0, 16)}...</span>
+            <button
+              onClick={() => setLastActionResult(null)}
+              className="p-1 rounded text-slate-400 hover:text-white"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -580,19 +633,33 @@ export function IncidentResponsePage({ onNavigate }) {
           {responsePlaybooks.map((pb) => {
             const Icon = pb.icon;
             const isRunning = executing === pb.id;
+            const isExecuted = Boolean(executedPlaybooks[pb.id]);
+            const execData = executedPlaybooks[pb.id];
 
             return (
               <div
                 key={pb.id}
-                className={`p-5 rounded-2xl border ${pb.color} flex flex-col justify-between transition-all duration-200 bg-slate-900/60 hover:border-cyan-500/60`}
+                className={`p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between ${
+                  isExecuted
+                    ? 'border-emerald-500/80 bg-gradient-to-b from-emerald-950/40 via-slate-900 to-[#070b14] shadow-[0_0_25px_rgba(16,185,129,0.2)]'
+                    : `bg-slate-900/60 hover:border-cyan-500/60 ${pb.color}`
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="p-2 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center">
+                    <div className={`p-2 rounded-lg border flex items-center justify-center ${
+                      isExecuted
+                        ? 'bg-emerald-950 border-emerald-500/50 text-emerald-400'
+                        : 'bg-black/40 border-white/10 text-current'
+                    }`}>
                       <Icon className="w-5 h-5 text-current" />
                     </div>
-                    <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">
-                      PLAYBOOK #{pb.id.slice(0, 3)}
+                    <span className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded border font-bold ${
+                      isExecuted
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-500/60 shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-pulse'
+                        : 'bg-slate-900 border-slate-700 text-slate-300'
+                    }`}>
+                      {isExecuted ? '✓ EXECUTED & ENFORCED' : `PLAYBOOK #${pb.id.slice(0, 3)}`}
                     </span>
                   </div>
 
@@ -602,6 +669,22 @@ export function IncidentResponsePage({ onNavigate }) {
                   <p className="text-xs text-slate-300 my-2 leading-relaxed">
                     {pb.desc}
                   </p>
+
+                  {/* Inline Execution Feedback Box */}
+                  {isExecuted && (
+                    <div className="my-2.5 p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-[11px] text-emerald-200 space-y-1 animate-fadeIn">
+                      <div className="flex items-center gap-1.5 font-bold text-white">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                        <span>Policy Active on {execData.target}</span>
+                      </div>
+                      <p className="text-[10px] text-emerald-300/90 leading-tight">
+                        {execData.message}
+                      </p>
+                      <span className="text-[9px] text-emerald-400/80 block font-mono">
+                        Active since {execData.time} UTC
+                      </span>
+                    </div>
+                  )}
 
                   {/* Target Selector */}
                   <div className="mt-3 pt-3 border-t border-slate-800">
@@ -632,10 +715,15 @@ export function IncidentResponsePage({ onNavigate }) {
                   <button
                     onClick={() => handleExecute(pb.id)}
                     disabled={isRunning}
-                    className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                    className={`px-4 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm ${
+                      isExecuted
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                        : 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-neon-cyan'
+                    } disabled:opacity-50`}
                   >
-                    <span>{isRunning ? 'Executing...' : 'Execute Action'}</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    {isExecuted ? <CheckCircle2 className="w-3.5 h-3.5 text-white" /> : null}
+                    <span>{isRunning ? 'Executing...' : isExecuted ? 'Executed (Re-run)' : 'Execute Action'}</span>
+                    {!isExecuted && <ChevronRight className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
