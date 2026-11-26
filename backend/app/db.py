@@ -1,3 +1,4 @@
+import sqlite3
 import json
 import os
 import threading
@@ -6,58 +7,123 @@ from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
+DB_PATH = os.path.join(DATA_DIR, "ployweb.db")
 
-class JsonCollection:
-    def __init__(self, filename: str):
-        self.filepath = os.path.join(DATA_DIR, filename)
+class SQLiteCollection:
+    """
+    Relational SQLite Collection replacing the legacy JSON store.
+    Stores and queries documents with SQLite transactions, ACID guarantees, and WAL mode.
+    """
+    def __init__(self, collection_name: str, db_path: str = DB_PATH):
+        self.collection_name = collection_name
+        self.db_path = db_path
         self.lock = threading.Lock()
-        self._data: List[Dict[str, Any]] = []
-        self._load()
+        self._local = threading.local()
+        self._init_table()
 
-    def _load(self):
+    def _get_connection(self) -> sqlite3.Connection:
+        if not hasattr(self._local, "conn") or self._local.conn is None:
+            conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=15.0)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode = WAL;")
+            conn.execute("PRAGMA foreign_keys = ON;")
+            self._local.conn = conn
+        return self._local.conn
+
+    def _init_table(self):
         with self.lock:
-            if os.path.exists(self.filepath):
-                try:
-                    with open(self.filepath, "r", encoding="utf-8") as f:
-                        self._data = json.load(f)
-                except Exception:
-                    self._data = []
-            else:
-                self._data = []
+            conn = self._get_connection()
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS sqlite_collections (
+                collection_name TEXT NOT NULL,
+                doc_id TEXT NOT NULL,
+                doc_data TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (collection_name, doc_id)
+            );
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_coll_name ON sqlite_collections(collection_name);")
+            conn.commit()
 
-    def _save(self):
-        try:
-            with open(self.filepath, "w", encoding="utf-8") as f:
-                json.dump(self._data, f, indent=2, default=str)
-        except Exception as e:
-            print(f"Error saving {self.filepath}: {e}")
-
-    def insert_one(self, doc: Dict[str, Any]):
+    def insert_one(self, doc: Dict[str, Any]) -> Dict[str, Any]:
         with self.lock:
             doc_copy = dict(doc)
-            self._data.append(doc_copy)
-            self._save()
+            doc_id = str(doc_copy.get("id") or doc_copy.get("_id") or datetime.utcnow().timestamp())
+            doc_copy["id"] = doc_id
+            json_str = json.dumps(doc_copy, default=str)
+            now_str = datetime.utcnow().isoformat()
+
+            conn = self._get_connection()
+            conn.execute("""
+                INSERT OR REPLACE INTO sqlite_collections (collection_name, doc_id, doc_data, created_at)
+                VALUES (?, ?, ?, ?)
+            """, (self.collection_name, doc_id, json_str, now_str))
+
+            # Sync security events with relational security_events table if applicable
+            if self.collection_name == "events.json":
+                try:
+                    conn.execute("""
+                        INSERT OR REPLACE INTO security_events (
+                            id, timestamp, source_ip, destination_ip, username, device_name,
+                            event_type, event_description, severity, mitre_id, mitre_name,
+                            stage, raw_payload, evidence_hash, status, is_canary, anomaly_score
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        doc_id,
+                        doc_copy.get("timestamp", now_str),
+                        doc_copy.get("source_ip", "10.0.2.14"),
+                        doc_copy.get("destination_ip", "10.0.2.14"),
+                        doc_copy.get("username", "david.webb"),
+                        doc_copy.get("device_name", "WS-ENGINEERING-07"),
+                        doc_copy.get("event_type", "suspicious_process"),
+                        doc_copy.get("event_description", "Forensic event logged"),
+                        doc_copy.get("severity", "medium"),
+                        doc_copy.get("mitre_id", "T1059"),
+                        doc_copy.get("mitre_name", "Command and Scripting"),
+                        int(doc_copy.get("stage", 1)),
+                        json_str,
+                        doc_copy.get("evidence_hash", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+                        doc_copy.get("status", "detected"),
+                        1 if doc_copy.get("is_canary") else 0,
+                        float(doc_copy.get("anomaly_score", 0.0))
+                    ))
+                except Exception:
+                    pass
+
+            conn.commit()
             return doc_copy
 
-    def insert_many(self, docs: List[Dict[str, Any]]):
-        with self.lock:
-            for doc in docs:
-                self._data.append(dict(doc))
-            self._save()
-            return docs
+    def insert_many(self, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        inserted = []
+        for d in docs:
+            inserted.append(self.insert_one(d))
+        return inserted
 
     def find(self, query: Optional[Dict[str, Any]] = None, sort_by: Optional[str] = None, reverse: bool = False, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         with self.lock:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT doc_data FROM sqlite_collections
+                WHERE collection_name = ?
+                ORDER BY created_at DESC
+            """, (self.collection_name,))
+            rows = cur.fetchall()
+
             results = []
-            for item in self._data:
-                match = True
-                if query:
-                    for k, v in query.items():
-                        if item.get(k) != v:
-                            match = False
-                            break
-                if match:
-                    results.append(dict(item))
+            for r in rows:
+                try:
+                    item = json.loads(r["doc_data"])
+                    match = True
+                    if query:
+                        for k, v in query.items():
+                            if item.get(k) != v:
+                                match = False
+                                break
+                    if match:
+                        results.append(item)
+                except Exception:
+                    pass
 
             if sort_by:
                 results.sort(key=lambda x: str(x.get(sort_by, "")), reverse=reverse)
@@ -67,71 +133,69 @@ class JsonCollection:
             return results
 
     def find_one(self, query: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        with self.lock:
-            for item in self._data:
-                match = True
-                for k, v in query.items():
-                    if item.get(k) != v:
-                        match = False
-                        break
-                if match:
-                    return dict(item)
-            return None
+        res = self.find(query=query, limit=1)
+        return res[0] if res else None
 
     def update_one(self, query: Dict[str, Any], update: Dict[str, Any]) -> bool:
         with self.lock:
-            for item in self._data:
-                match = True
-                for k, v in query.items():
-                    if item.get(k) != v:
-                        match = False
-                        break
-                if match:
-                    # check for $set operator or plain dict
-                    if "$set" in update:
-                        item.update(update["$set"])
-                    else:
-                        item.update(update)
-                    self._save()
-                    return True
-            return False
+            target = self.find_one(query)
+            if not target:
+                return False
+
+            if "$set" in update:
+                target.update(update["$set"])
+            else:
+                target.update(update)
+
+            conn = self._get_connection()
+            conn.execute("""
+                UPDATE sqlite_collections
+                SET doc_data = ?
+                WHERE collection_name = ? AND doc_id = ?
+            """, (json.dumps(target, default=str), self.collection_name, target.get("id")))
+            conn.commit()
+            return True
 
     def delete_many(self, query: Optional[Dict[str, Any]] = None) -> int:
         with self.lock:
+            conn = self._get_connection()
             if not query:
-                count = len(self._data)
-                self._data = []
-                self._save()
-                return count
-            
-            initial_count = len(self._data)
-            self._data = [
-                item for item in self._data
-                if not all(item.get(k) == v for k, v in query.items())
-            ]
-            deleted = initial_count - len(self._data)
-            self._save()
+                cur = conn.execute("DELETE FROM sqlite_collections WHERE collection_name = ?", (self.collection_name,))
+                if self.collection_name == "events.json":
+                    try:
+                        conn.execute("DELETE FROM security_events;")
+                    except Exception:
+                        pass
+                conn.commit()
+                return cur.rowcount
+
+            # Delete matching items
+            items = self.find(query)
+            deleted = 0
+            for item in items:
+                conn.execute("""
+                    DELETE FROM sqlite_collections
+                    WHERE collection_name = ? AND doc_id = ?
+                """, (self.collection_name, item.get("id")))
+                deleted += 1
+            conn.commit()
             return deleted
 
     def count_documents(self, query: Optional[Dict[str, Any]] = None) -> int:
-        with self.lock:
-            if not query:
-                return len(self._data)
-            count = 0
-            for item in self._data:
-                if all(item.get(k) == v for k, v in query.items()):
-                    count += 1
-            return count
+        return len(self.find(query))
 
 class DatabaseManager:
+    """
+    SQLite Relational Database Manager replacing legacy JSON file store.
+    """
     def __init__(self):
-        self.events = JsonCollection("events.json")
-        self.canaries = JsonCollection("canaries.json")
-        self.response_actions = JsonCollection("response_actions.json")
-        self.incidents = JsonCollection("incidents.json")
-        self.settings = JsonCollection("settings.json")
-        self.simulation_state = JsonCollection("simulation_state.json")
-        self.devices = JsonCollection("devices.json")
+        self.events = SQLiteCollection("events.json")
+        self.canaries = SQLiteCollection("canaries.json")
+        self.response_actions = SQLiteCollection("response_actions.json")
+        self.incidents = SQLiteCollection("incidents.json")
+        self.settings = SQLiteCollection("settings.json")
+        self.simulation_state = SQLiteCollection("simulation_state.json")
+        self.devices = SQLiteCollection("devices.json")
         self._init_defaults()
 
     def _init_defaults(self):

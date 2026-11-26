@@ -18,6 +18,7 @@ import { EvidenceLedgerPage } from './pages/EvidenceLedgerPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { EmployeePortalPage } from './pages/EmployeePortalPage';
+import { CustomerPortalPage } from './pages/CustomerPortalPage';
 import { EmployeeManagementPage } from './pages/EmployeeManagementPage';
 import { useAuth } from './context/AuthContext';
 import { useSecurity } from './context/SecurityContext';
@@ -45,6 +46,9 @@ export function App() {
   };
 
   const renderActivePage = () => {
+    if (activePortal === 'customer' && currentPath !== '/settings') {
+      return <CustomerPortalPage onNavigate={handleNavigate} />;
+    }
     if (activePortal === 'employee' && currentPath !== '/settings') {
       return <EmployeePortalPage onNavigate={handleNavigate} />;
     }
@@ -52,6 +56,8 @@ export function App() {
     switch (currentPath) {
       case '/':
         return <DashboardPage onNavigate={handleNavigate} onInspectEvidence={handleInspectEvidence} />;
+      case '/customer-portal':
+        return <CustomerPortalPage onNavigate={handleNavigate} />;
       case '/employees':
         return <EmployeeManagementPage onInspectEvidence={handleInspectEvidence} />;
       case '/employee-portal':

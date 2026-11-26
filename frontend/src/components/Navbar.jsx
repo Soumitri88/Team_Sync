@@ -59,6 +59,8 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
         return { full: 'Employee Identity & Access Governance', short: 'Employees' };
       case '/employee-portal':
         return { full: 'Employee Security Portal', short: 'Employee Portal' };
+      case '/customer-portal':
+        return { full: 'Customer Identity & Privacy Portal', short: 'Customer Portal' };
       case '/settings':
         return { full: 'Platform & SOC Settings', short: 'Settings' };
       default:
@@ -152,16 +154,28 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
 
           {/* Portal Switcher Button */}
           <button
-            onClick={() => switchPortal(activePortal === 'admin' ? 'employee' : 'admin')}
-            title="Switch between Master SOC Portal and Employee Portal"
+            onClick={() => {
+              if (activePortal === 'admin') switchPortal('employee');
+              else if (activePortal === 'employee') switchPortal('customer');
+              else switchPortal('admin');
+            }}
+            title="Cycle between Master SOC Portal, Employee Portal, and Customer Portal"
             className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-mono font-bold border transition-all flex items-center gap-1.5 shadow-sm ${
-              activePortal === 'employee'
+              activePortal === 'customer'
+                ? 'bg-blue-950 text-blue-300 border-blue-500/50 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
+                : activePortal === 'employee'
                 ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
                 : 'bg-cyan-950 text-cyan-300 border-cyan-500/50 shadow-neon-cyan'
             }`}
           >
-            <span>{activePortal === 'employee' ? 'EMPLOYEE PORTAL' : 'SOC ADMIN'}</span>
-            <span className="text-[10px] text-slate-400 font-normal hidden lg:inline">⇄ Switch</span>
+            <span>
+              {activePortal === 'customer'
+                ? 'CUSTOMER PORTAL'
+                : activePortal === 'employee'
+                ? 'EMPLOYEE PORTAL'
+                : 'SOC ADMIN'}
+            </span>
+            <span className="text-[10px] text-slate-400 font-normal hidden lg:inline">⇄ Cycle</span>
           </button>
 
           {/* Operator Name & Sign Out */}

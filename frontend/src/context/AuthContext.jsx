@@ -62,6 +62,21 @@ export const DEMO_EMPLOYEES = {
   }
 };
 
+export const DEMO_CUSTOMERS = {
+  jessica: {
+    id: "usr-jessica",
+    name: "Jessica Miller",
+    username: "jessica.miller",
+    employee_id: "CUST-8841",
+    department: "Customer Accounts",
+    role: "customer",
+    role_label: "Personal Identity Shield (Premium)",
+    badge: "CUSTOMER-VERIFIED",
+    avatar: "JM",
+    portal: "customer"
+  }
+};
+
 /**
  * AI-Assisted Risk-Based Access Decision Engine:
  * Scores authentication attempts from behavioral telemetry signals:
@@ -255,6 +270,17 @@ export const AuthProvider = ({ children }) => {
         if (foundEmp) {
           matched = foundEmp;
           matchedRole = "employee";
+        } else {
+          // 3. Check Customers
+          const foundCust = Object.values(DEMO_CUSTOMERS).find(c =>
+            (c.username && c.username.toLowerCase() === cleanUser) ||
+            (c.employee_id && c.employee_id.toLowerCase() === cleanUser) ||
+            (c.id && c.id.toLowerCase() === cleanUser)
+          );
+          if (foundCust) {
+            matched = foundCust;
+            matchedRole = "customer";
+          }
         }
       }
 
@@ -262,6 +288,7 @@ export const AuthProvider = ({ children }) => {
       const validPasswords = [
         "PloyWeb@2026!",
         "Employee@2026!",
+        "Customer@2026!",
         "password123",
         "admin",
         "socadmin"
@@ -409,7 +436,11 @@ export const AuthProvider = ({ children }) => {
 
   const loginDemoPersona = (personaKey, portalType = "admin") => {
     let selected = null;
-    if (portalType === "employee") {
+    if (portalType === "customer") {
+      selected = DEMO_CUSTOMERS[personaKey] || DEMO_CUSTOMERS.jessica;
+      setActivePortal("customer");
+      localStorage.setItem("ployweb_active_portal", "customer");
+    } else if (portalType === "employee") {
       selected = DEMO_EMPLOYEES[personaKey] || DEMO_EMPLOYEES.david;
       setActivePortal("employee");
       localStorage.setItem("ployweb_active_portal", "employee");
@@ -427,11 +458,13 @@ export const AuthProvider = ({ children }) => {
   const switchPortal = (portalName) => {
     setActivePortal(portalName);
     localStorage.setItem("ployweb_active_portal", portalName);
-    if (portalName === "employee" && user?.role === "admin") {
-      // Switch active view to employee profile
+    if (portalName === "customer") {
+      setUser(DEMO_CUSTOMERS.jessica);
+      localStorage.setItem("ployweb_user", JSON.stringify(DEMO_CUSTOMERS.jessica));
+    } else if (portalName === "employee") {
       setUser(DEMO_EMPLOYEES.david);
       localStorage.setItem("ployweb_user", JSON.stringify(DEMO_EMPLOYEES.david));
-    } else if (portalName === "admin" && user?.role === "employee") {
+    } else {
       setUser(DEMO_ADMINS.commander);
       localStorage.setItem("ployweb_user", JSON.stringify(DEMO_ADMINS.commander));
     }

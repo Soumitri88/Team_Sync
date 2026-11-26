@@ -22,7 +22,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { useAuth, DEMO_ADMINS, DEMO_EMPLOYEES, evaluateLoginRisk } from '../context/AuthContext';
+import { useAuth, DEMO_ADMINS, DEMO_EMPLOYEES, DEMO_CUSTOMERS, evaluateLoginRisk } from '../context/AuthContext';
 import { useSecurity } from '../context/SecurityContext';
 
 export const LoginPage = ({ onLoginSuccess }) => {
@@ -463,7 +463,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
                 setUsername('avance.soc');
                 setPassword('PloyWeb@2026!');
               }}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all ${
                 portalType === 'admin'
                   ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50 shadow-neon-cyan'
                   : 'text-slate-400 hover:text-white'
@@ -482,14 +482,33 @@ export const LoginPage = ({ onLoginSuccess }) => {
                 setUsername('EMP-041');
                 setPassword('Employee@2026!');
               }}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all ${
                 portalType === 'employee'
                   ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               <User className="w-3.5 h-3.5" />
-              <span>Employee / Customer Portal</span>
+              <span>Employee Portal</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPortalType('customer');
+                setErrorMsg(null);
+                setMfaChallenge(null);
+                setUsername('CUST-8841');
+                setPassword('Customer@2026!');
+              }}
+              className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all ${
+                portalType === 'customer'
+                  ? 'bg-blue-950 text-blue-300 border border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Customer Portal</span>
             </button>
           </div>
         </div>
@@ -892,7 +911,11 @@ export const LoginPage = ({ onLoginSuccess }) => {
               {/* Quick Persona Selector for Hackathon Judges */}
               <div>
                 <label className="text-xs font-mono uppercase text-slate-400 tracking-wider block mb-2">
-                  {portalType === 'admin' ? 'Select SOC Operator Persona' : 'Select Employee Persona (NovaTech Solutions)'}
+                  {portalType === 'admin'
+                    ? 'Select SOC Operator Persona'
+                    : portalType === 'customer'
+                    ? 'Select Customer Persona (Identity & Privacy Shield)'
+                    : 'Select Employee Persona (NovaTech Solutions)'}
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -908,6 +931,23 @@ export const LoginPage = ({ onLoginSuccess }) => {
                             <span className="font-bold text-white text-xs">{u.name}</span>
                             <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
                               {u.badge}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400">{u.role_label}</div>
+                        </button>
+                      ))
+                    : portalType === 'customer'
+                    ? Object.entries(DEMO_CUSTOMERS).map(([k, u]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => handleQuickPersonaLogin(k)}
+                          className="p-3 rounded-xl border border-slate-800 hover:border-blue-500/50 bg-[#0d1527]/70 hover:bg-[#101b33] text-left transition-all font-mono"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-white text-xs">{u.name}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-500/30">
+                              {u.employee_id}
                             </span>
                           </div>
                           <div className="text-[10px] text-slate-400">{u.role_label}</div>
@@ -934,30 +974,30 @@ export const LoginPage = ({ onLoginSuccess }) => {
 
               {/* Or Manual Credentials Login / Registration */}
               <div className="pt-2 border-t border-slate-800">
-                {portalType === 'employee' && (
+                {(portalType === 'employee' || portalType === 'customer') && (
                   <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-black/60 border border-slate-800 text-xs font-mono mb-3">
                     <button
                       type="button"
                       onClick={() => { setIsRegistering(false); setErrorMsg(null); }}
                       className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                        !isRegistering ? 'bg-emerald-500 text-black shadow' : 'text-slate-400 hover:text-white'
+                        !isRegistering ? (portalType === 'customer' ? 'bg-blue-600 text-white shadow' : 'bg-emerald-500 text-black shadow') : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      Employee Sign In
+                      {portalType === 'customer' ? 'Customer Sign In' : 'Employee Sign In'}
                     </button>
                     <button
                       type="button"
                       onClick={() => { setIsRegistering(true); setErrorMsg(null); }}
                       className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                        isRegistering ? 'bg-emerald-500 text-black shadow' : 'text-slate-400 hover:text-white'
+                        isRegistering ? (portalType === 'customer' ? 'bg-blue-600 text-white shadow' : 'bg-emerald-500 text-black shadow') : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      Register New Account
+                      Register New {portalType === 'customer' ? 'Customer' : 'Account'}
                     </button>
                   </div>
                 )}
 
-                {isRegistering && portalType === 'employee' ? (
+                {isRegistering && (portalType === 'employee' || portalType === 'customer') ? (
                   /* Employee Registration Form */
                   <form onSubmit={handleRegister} className="space-y-3 font-mono text-xs animate-fadeIn">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1109,6 +1149,9 @@ export const LoginPage = ({ onLoginSuccess }) => {
                             if (portalType === 'admin') {
                               setUsername('avance.soc');
                               setPassword('PloyWeb@2026!');
+                            } else if (portalType === 'customer') {
+                              setUsername('CUST-8841');
+                              setPassword('Customer@2026!');
                             } else {
                               setUsername('EMP-041');
                               setPassword('Employee@2026!');
@@ -1116,7 +1159,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
                           }}
                           className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10px] font-mono transition-colors"
                         >
-                          ✓ Fill Valid {portalType === 'admin' ? 'Admin' : 'Employee'} Credentials
+                          ✓ Fill Valid {portalType === 'admin' ? 'Admin' : portalType === 'customer' ? 'Customer' : 'Employee'} Credentials
                         </button>
 
                         <button

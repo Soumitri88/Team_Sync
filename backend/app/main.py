@@ -16,6 +16,7 @@ from .response_actions import execute_simulated_action, get_action_history
 from .evidence import verify_ledger, simulate_tamper_record, restore_tampered_record
 from .report import generate_investigation_report
 from .receiver import router as receiver_router, receiver_state
+from .anomaly_detector import anomaly_engine
 
 app = FastAPI(
     title="PloyWeb – Autonomous Cyber Investigation & Attack Graph Reconstruction API",
@@ -1061,6 +1062,93 @@ def get_audit_logs():
         "chain_valid": is_valid,
         "root_hash": rows[0]["current_hash"] if rows else "GENESIS",
         "logs": rows
+    }
+
+# ==================== ANOMALY DETECTION & EXPLAINABILITY ENDPOINTS ====================
+
+@app.get("/api/anomaly/baseline/{username}")
+def get_employee_baseline(username: str):
+    baseline = anomaly_engine.get_user_baseline(username)
+    return baseline
+
+@app.get("/api/anomaly/why-flagged/{event_id}")
+def get_why_flagged_diagnostic(event_id: str):
+    evt = db.events.find_one({"id": event_id})
+    if not evt:
+        evt = {
+            "id": event_id,
+            "event_type": "suspicious_login",
+            "severity": "critical",
+            "username": "david.webb",
+            "source_ip": "198.51.100.44",
+            "timestamp": datetime.utcnow().isoformat(),
+            "mitre_id": "T1078"
+        }
+    diagnostic = anomaly_engine.analyze_event_explainability(evt)
+    return diagnostic
+
+@app.post("/api/anomaly/check-login")
+def check_login_anomaly(payload: Dict[str, Any]):
+    username = payload.get("username", "david.webb")
+    src_ip = payload.get("ip_address", "198.51.100.44")
+    dt = datetime.utcnow()
+    
+    baseline = anomaly_engine.get_user_baseline(username)
+    current_hour_float = dt.hour + dt.minute / 60.0
+    z_score = anomaly_engine.compute_z_score(current_hour_float, baseline["mean_login_hour"], baseline["std_login_hour"])
+    travel_check = anomaly_engine.check_impossible_travel(username, src_ip, dt)
+    
+    score = 10.0
+    signals = []
+    if abs(z_score) > 2.0:
+        score += 25.0
+        signals.append("Time Anomaly Z-Score Exceeded")
+    if src_ip not in baseline["known_ips"]:
+        score += 30.0
+        signals.append("Unseen Source IP")
+    if travel_check:
+        score += 45.0
+        signals.append("Impossible Travel Velocity")
+    
+    score = min(100.0, score)
+    level = "CRITICAL" if score >= 80 else "HIGH" if score >= 60 else "MEDIUM" if score >= 40 else "LOW"
+    return {
+        "score": score,
+        "level": level,
+        "z_score": round(z_score, 2),
+        "impossible_travel": travel_check,
+        "signals": signals
+    }
+
+# ==================== CUSTOMER PORTAL ENDPOINTS ====================
+
+@app.get("/api/customer/dashboard")
+def get_customer_dashboard(customer_id: str = "CUST-8841"):
+    cust = db_mgr.query_one("SELECT * FROM customer_accounts WHERE customer_id = ?", (customer_id,))
+    if not cust:
+        cust = {
+            "id": "cust-01",
+            "customer_id": customer_id,
+            "full_name": "Jessica Miller",
+            "email": "jessica.miller@customer.example.com",
+            "account_tier": "Personal Security & Identity Shield (Premium)",
+            "balance": 1500.0,
+            "status": "active"
+        }
+    return {
+        "customer": cust,
+        "protection_score": 96.0,
+        "mfa_status": "ENFORCED",
+        "active_devices": [
+            {"id": "DEV-IPHONE", "name": "Jessica's iPhone 15 Pro", "os": "iOS 17.4", "biometrics": "FaceID Active", "last_active": "2 minutes ago"},
+            {"id": "DEV-MACBOOK", "name": "MacBook Air M2", "os": "macOS Sonoma", "biometrics": "TouchID Active", "last_active": "Active Now"}
+        ],
+        "active_sessions": [
+            {"id": "SESS-CUST-1", "ip": "10.0.2.14", "location": "Austin, TX (Home Wi-Fi)", "device": "MacBook Air", "current": True}
+        ],
+        "alerts": [
+            {"id": "ALT-CUST-1", "title": "Untrusted Connection Blocked", "desc": "An untrusted login attempt from Amsterdam proxy IP 198.51.100.44 was prevented.", "severity": "high", "time": "1 hour ago"}
+        ]
     }
 
 # ==================== STATIC FILE SERVING FOR FULL-STACK DEPLOYMENT ====================

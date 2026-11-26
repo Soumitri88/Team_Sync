@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck,
+  ShieldAlert,
   Server,
   UserX,
   Slash,
@@ -23,10 +24,15 @@ import {
   XCircle,
   ArrowUpRight,
   FileSignature,
-  Clock
+  Clock,
+  Plane,
+  Gauge,
+  Zap,
+  Cpu
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
+import { WhyFlaggedModal } from '../components/WhyFlaggedModal';
 
 export function IncidentResponsePage({ onNavigate }) {
   const { 
@@ -39,6 +45,7 @@ export function IncidentResponsePage({ onNavigate }) {
     stats 
   } = useSecurity();
   const { user } = useAuth();
+  const [whyFlaggedOpen, setWhyFlaggedOpen] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState({
     review_logins: 'david.webb',
     revoke_session: 'david.webb',
@@ -353,6 +360,107 @@ export function IncidentResponsePage({ onNavigate }) {
         </div>
       </div>
 
+      {/* WHY FLAGGED PANEL: Multi-Signal Diagnostic & Anomaly Breakdown */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-red-950/40 via-[#0d1527] to-[#070b14] border border-red-500/40 shadow-xl space-y-4 font-mono">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-red-500/30 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400">
+              <ShieldAlert className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-500/50 font-bold uppercase">
+                  Explainable AI Diagnostics
+                </span>
+                <span className="text-[10px] text-cyan-400 font-bold">
+                  Per-User Statistical Baseline Active
+                </span>
+              </div>
+              <h2 className="text-sm sm:text-base font-extrabold text-white mt-0.5">
+                "Why Flagged?" Multi-Signal Anomaly & Threat Contribution Panel
+              </h2>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setWhyFlaggedOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-neon-red transition-all self-start sm:self-auto"
+          >
+            <Gauge className="w-3.5 h-3.5" />
+            <span>Launch Deep Diagnostic Modal</span>
+          </button>
+        </div>
+
+        {/* 4 Diagnostic Metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div className="p-3 rounded-xl bg-black/50 border border-red-500/30">
+            <span className="text-[10px] text-red-300 font-bold uppercase block">Composite Threat Score</span>
+            <div className="text-xl font-extrabold text-red-400 mt-1">88.5 / 100</div>
+            <span className="text-[9px] text-slate-400">CRITICAL DEFCON-1</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-black/50 border border-cyan-500/30">
+            <span className="text-[10px] text-cyan-300 font-bold uppercase block">Time Anomaly Z-Score</span>
+            <div className="text-xl font-extrabold text-cyan-300 mt-1">+2.84 σ</div>
+            <span className="text-[9px] text-slate-400">Login 03:14 UTC (Mean: 13.0 ± 2.5h)</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-black/50 border border-purple-500/30">
+            <span className="text-[10px] text-purple-300 font-bold uppercase block">Impossible Travel</span>
+            <div className="text-xl font-extrabold text-purple-300 mt-1">18,375 km/h</div>
+            <span className="text-[9px] text-slate-400">Austin HQ → Amsterdam (26 min)</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-black/50 border border-amber-500/30">
+            <span className="text-[10px] text-amber-300 font-bold uppercase block">Decoy Canary Breach</span>
+            <div className="text-xl font-extrabold text-amber-400 mt-1">TRIPPED</div>
+            <span className="text-[9px] text-slate-400">passwords_confidential.xlsx</span>
+          </div>
+        </div>
+
+        {/* Signals Table */}
+        <div className="space-y-2 pt-1">
+          <div className="text-[11px] font-bold text-slate-300 uppercase flex items-center justify-between">
+            <span>Detected Signals & Point Score Contribution:</span>
+            <span className="text-slate-500 text-[10px]">Additive Multi-Signal Isolation Model</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-sans">
+            <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800 flex items-start justify-between gap-2">
+              <div>
+                <span className="font-bold text-white text-xs block font-mono">1. Statistical Time Anomaly (Z-Score)</span>
+                <p className="text-[11px] text-slate-400 mt-0.5">Off-hours login at 03:14 UTC deviates +2.84σ from employee's 30-day baseline.</p>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-red-950 text-red-300 font-bold text-xs font-mono flex-shrink-0">+25.0 pts</span>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800 flex items-start justify-between gap-2">
+              <div>
+                <span className="font-bold text-white text-xs block font-mono">2. Previously Unseen Source IP</span>
+                <p className="text-[11px] text-slate-400 mt-0.5">IP 198.51.100.44 has 0 prior recorded logins in employee baseline history.</p>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-red-950 text-red-300 font-bold text-xs font-mono flex-shrink-0">+30.0 pts</span>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800 flex items-start justify-between gap-2">
+              <div>
+                <span className="font-bold text-white text-xs block font-mono">3. External Anonymity Proxy Subnet</span>
+                <p className="text-[11px] text-slate-400 mt-0.5">Subnet 198.51.100.0/24 resolves to an external commercial proxy in Amsterdam.</p>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-red-950 text-red-300 font-bold text-xs font-mono flex-shrink-0">+35.0 pts</span>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800 flex items-start justify-between gap-2">
+              <div>
+                <span className="font-bold text-white text-xs block font-mono">4. Impossible Travel Velocity Flag</span>
+                <p className="text-[11px] text-slate-400 mt-0.5">8,024 km spherical distance between Austin and Amsterdam traversed in 26 minutes (18,375 km/h vs 900 km/h threshold).</p>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-red-950 text-red-300 font-bold text-xs font-mono flex-shrink-0">+45.0 pts</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Adversary Threat Containment & Controlled Receiver Status Card */}
       <div className="p-5 rounded-2xl bg-[#070b14] border border-cyan-500/40 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
@@ -597,6 +705,13 @@ export function IncidentResponsePage({ onNavigate }) {
           </table>
         </div>
       </div>
+
+      {/* Why Flagged Diagnostic Modal */}
+      <WhyFlaggedModal
+        isOpen={whyFlaggedOpen}
+        onClose={() => setWhyFlaggedOpen(false)}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 }

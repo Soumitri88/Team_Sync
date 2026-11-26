@@ -39,6 +39,7 @@ export const Sidebar = ({ currentPath, onNavigate, isOpen, onClose }) => {
   ];
 
   const secondaryNav = [
+    { id: 'customer-portal', label: 'Customer Portal View', path: '/customer-portal', icon: Globe },
     { id: 'employee-portal', label: 'Employee Portal View', path: '/employee-portal', icon: UserCheck },
     { id: 'canary-twin', label: 'Decoy Traps (Canary)', path: '/canary-twin', icon: Bug },
     { id: 'events', label: 'Event Logs', path: '/events', icon: Radio },
