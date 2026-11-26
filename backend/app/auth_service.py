@@ -400,3 +400,48 @@ def record_audit_log(user_id: Optional[str], username: str, action: str, inciden
         "current_hash": current_hash,
         "timestamp": now_str
     }
+
+def register_employee(
+    username: str,
+    password: str,
+    full_name: str,
+    employee_id: str,
+    department: str,
+    email: Optional[str] = None
+) -> Dict[str, Any]:
+    """Registers a new employee account with PBKDF2 hashed password and cryptographic audit entry."""
+    now_str = datetime.utcnow().isoformat()
+    clean_user = username.strip().lower()
+    clean_emp_id = employee_id.strip().upper()
+
+    existing = db_mgr.query_one("SELECT id FROM users WHERE username = ?", (clean_user,))
+    if existing:
+        return {"success": False, "error": f"Username '{clean_user}' is already registered."}
+
+    user_id = f"usr-{secrets.token_hex(4)}"
+    pwd_hash = hash_password(password)
+
+    db_mgr.execute("""
+        INSERT INTO users (id, username, password_hash, role_id, full_name, is_active, failed_attempts, is_locked, created_at, updated_at)
+        VALUES (?, ?, ?, 'employee', ?, 1, 0, 0, ?, ?)
+    """, (user_id, clean_user, pwd_hash, full_name, now_str, now_str))
+
+    db_mgr.execute("""
+        INSERT INTO employees (id, user_id, employee_id, department, title, email, phone, created_at)
+        VALUES (?, ?, ?, ?, 'Staff Associate', ?, 'N/A', ?)
+    """, (f"emp-{secrets.token_hex(4)}", user_id, clean_emp_id, department, email or f"{clean_user}@novatech.internal", now_str))
+
+    record_audit_log(user_id, clean_user, "EMPLOYEE_REGISTRATION", None, "SUCCESS",
+                     f"Employee '{clean_user}' ({clean_emp_id}) registered in {department}.")
+
+    return {
+        "success": True,
+        "user": {
+            "id": user_id,
+            "username": clean_user,
+            "full_name": full_name,
+            "employee_id": clean_emp_id,
+            "department": department,
+            "role": "employee"
+        }
+    }

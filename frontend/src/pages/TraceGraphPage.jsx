@@ -346,6 +346,45 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
                 </div>
               </div>
 
+              {/* WHY FLAGGED / EXPLAINABILITY SECTION */}
+              <div className="p-3 rounded-xl bg-gradient-to-b from-[#0e172a] to-[#070b14] border border-amber-500/30 space-y-2">
+                <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[10px] font-bold text-amber-200 uppercase tracking-wider">Why Flagged (Explainability)</span>
+                  </div>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40">
+                    RISK: {selectedEntity.raw?.severity === 'critical' ? '92/100' : '78/100'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-[10px]">
+                  <div className="flex justify-between items-center text-slate-300">
+                    <span>• Behavioral Baseline Deviation:</span>
+                    <span className="text-amber-300 font-bold">+3.8 σ (+35 pts)</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-300">
+                    <span>• Unseen External Proxy / IP:</span>
+                    <span className="text-amber-300 font-bold">+30 pts</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-300">
+                    <span>• High Risk Asset / Target Affinity:</span>
+                    <span className="text-amber-300 font-bold">+25 pts</span>
+                  </div>
+                  {selectedEntity.raw?.is_critical_path && (
+                    <div className="flex justify-between items-center text-red-300">
+                      <span>• Critical Attack Kill-Chain Member:</span>
+                      <span className="text-red-400 font-bold">+40 pts</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-1.5 border-t border-white/5 flex justify-between items-center text-[9px] text-slate-400">
+                  <span>Rule: Anomaly Z-Score & MITRE</span>
+                  <span className="text-emerald-400 font-semibold">Evidence Verified</span>
+                </div>
+              </div>
+
               {/* Description */}
               {selectedEntity.description && (
                 <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">

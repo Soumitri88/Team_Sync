@@ -48,7 +48,7 @@ def build_attack_graph() -> Dict[str, Any]:
     node_registry: Dict[str, Dict[str, Any]] = {}
     edges_list: List[Dict[str, Any]] = []
 
-    def register_node(node_id: str, label: str, node_type: str, severity: str = "medium", metadata: Dict[str, Any] = None):
+    def register_node(node_id: str, label: str, node_type: str, severity: str = "medium", metadata: Dict[str, Any] = None, timestamp: str = None):
         if node_id not in node_registry:
             # Determine initial visual state
             if severity == "critical":
@@ -70,6 +70,8 @@ def build_attack_graph() -> Dict[str, Any]:
                 "stage": 1,
                 "confidence": confidence,
                 "relationship_nature": rel_nature,
+                "first_seen": timestamp or datetime.utcnow().isoformat(),
+                "last_seen": timestamp or datetime.utcnow().isoformat(),
                 "metadata": metadata or {},
                 "event_references": []
             }
@@ -82,6 +84,11 @@ def build_attack_graph() -> Dict[str, Any]:
                     node_registry[node_id]["visual_state"] = "malicious-simulation"
                 elif severity == "high" and node_registry[node_id]["visual_state"] != "malicious-simulation":
                     node_registry[node_id]["visual_state"] = "suspicious"
+
+            if timestamp:
+                if not node_registry[node_id].get("first_seen"):
+                    node_registry[node_id]["first_seen"] = timestamp
+                node_registry[node_id]["last_seen"] = timestamp
 
         if metadata:
             node_registry[node_id]["metadata"].update(metadata)
@@ -366,6 +373,20 @@ def build_attack_graph() -> Dict[str, Any]:
     except Exception:
         critical_path = list(node_registry.keys())[:6]
 
+    # Calculate NetworkX Topology & Centrality Metrics
+    try:
+        degree_centrality = nx.degree_centrality(G)
+    except Exception:
+        degree_centrality = {n: 0.25 for n in G.nodes}
+
+    try:
+        if len(G.nodes) > 1:
+            pagerank = nx.pagerank(G, alpha=0.85)
+        else:
+            pagerank = {n: 1.0 for n in G.nodes}
+    except Exception:
+        pagerank = {n: round(1.0 / max(1, len(G.nodes)), 3) for n in G.nodes}
+
     # Clean spatial layout for GraphX canvas
     # X axis = Stage / Chronological timeline (1 -> 6)
     # Y axis = Logical Architectural Tier:
@@ -402,6 +423,8 @@ def build_attack_graph() -> Dict[str, Any]:
         y = type_y_map.get(ntype, 300) + (idx * 80)
 
         is_crit = node_id in critical_path
+        dc = round(degree_centrality.get(node_id, 0.2), 3)
+        pr = round(pagerank.get(node_id, 0.15), 3)
 
         graphx_nodes.append({
             "id": node_id,
@@ -411,7 +434,13 @@ def build_attack_graph() -> Dict[str, Any]:
                 **node,
                 "is_critical_path": is_crit,
                 "critical_path": is_crit,
-                "is_patient_zero": (node_id == f"node-device-{patient_zero}")
+                "is_patient_zero": (node_id == f"node-device-{patient_zero}"),
+                "degree_centrality": dc,
+                "pagerank": pr,
+                "first_seen": node.get("first_seen"),
+                "last_seen": node.get("last_seen"),
+                "confidence": node.get("confidence", 1.0),
+                "relationship_nature": node.get("relationship_nature", "observed")
             }
         })
 
@@ -448,7 +477,7 @@ def build_attack_graph() -> Dict[str, Any]:
         })
 
     return {
-        "engine": "PloyWeb GraphX Autonomous Reconstruction Engine v2.4",
+        "engine": "PloyWeb GraphX Autonomous Reconstruction Engine v2.4 (NetworkX Powered)",
         "nodes": graphx_nodes,
         "edges": graphx_edges,
         "summary": {
@@ -457,6 +486,8 @@ def build_attack_graph() -> Dict[str, Any]:
             "attack_stages": max([n["stage"] for n in node_registry.values()], default=0),
             "patient_zero": patient_zero,
             "critical_path": critical_path,
-            "containment_status": "CONTAINED" if is_contained_globally else "ACTIVE_INTRUSION"
+            "containment_status": "CONTAINED" if is_contained_globally else "ACTIVE_INTRUSION",
+            "graph_density": round(nx.density(G), 3) if G.number_of_nodes() > 1 else 0.0,
+            "networkx_topology": "Directed Multigraph (DiGraph) with PageRank & Centrality"
         }
     }

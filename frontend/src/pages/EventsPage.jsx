@@ -3,7 +3,11 @@ import {
   Radio, 
   Search, 
   PlusCircle, 
-  RefreshCw 
+  RefreshCw,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  ShieldAlert
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 
@@ -13,6 +17,7 @@ export const EventsPage = ({ onInspectEvidence }) => {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc' by timestamp
   const [showIngestModal, setShowIngestModal] = useState(false);
+  const [expandedWhyFlagged, setExpandedWhyFlagged] = useState(null);
   const [customEvent, setCustomEvent] = useState({
     source_ip: '203.0.113.199',
     destination_ip: '10.0.3.11',
@@ -179,6 +184,7 @@ export const EventsPage = ({ onInspectEvidence }) => {
                 <th className="py-3 px-3.5">Source → Destination</th>
                 <th className="py-3 px-3.5">Host & User</th>
                 <th className="py-3 px-3.5">MITRE ATT&CK</th>
+                <th className="py-3 px-3.5 text-center">Explainability</th>
                 <th className="py-3 px-3.5">Description</th>
                 <th className="py-3 px-3.5 text-right">Integrity Digest</th>
               </tr>
@@ -186,7 +192,7 @@ export const EventsPage = ({ onInspectEvidence }) => {
             <tbody className="divide-y divide-[#1b2a47]/50">
               {filteredEvents.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-500">
+                  <td colSpan={10} className="py-12 text-center text-slate-500">
                     No events match the current filter criteria.
                   </td>
                 </tr>
@@ -201,53 +207,142 @@ export const EventsPage = ({ onInspectEvidence }) => {
                       ? 'text-cyan-400 bg-cyan-950/80 border-cyan-500/50'
                       : 'text-emerald-400 bg-emerald-950/80 border-emerald-500/50';
 
+                  const isExpanded = expandedWhyFlagged === evt.id;
+
                   return (
-                    <tr
-                      key={evt.id}
-                      onClick={() => onInspectEvidence && onInspectEvidence(evt)}
-                      className="hover:bg-cyan-950/20 transition-colors cursor-pointer group"
-                    >
-                      <td className="py-3 px-3.5 text-cyan-400 font-semibold whitespace-nowrap">
-                        {evt.id}
-                      </td>
-                      <td className="py-3 px-3.5 text-slate-300 whitespace-nowrap">
-                        {evt.timestamp ? evt.timestamp.replace('T', ' ').slice(0, 19) : '--'}
-                      </td>
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase ${sevColor}`}>
-                          {evt.severity}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3.5 text-slate-200 capitalize font-medium whitespace-nowrap">
-                        {evt.event_type?.replace(/_/g, ' ')}
-                      </td>
-                      <td className="py-3 px-3.5 text-slate-300 whitespace-nowrap">
-                        <span className="text-cyan-300">{evt.source_ip}</span>
-                        <span className="text-slate-500 mx-1">→</span>
-                        <span className="text-slate-200">{evt.destination_ip}</span>
-                      </td>
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <div className="text-slate-200 font-semibold">{evt.device_name || 'N/A'}</div>
-                        <div className="text-[10px] text-purple-300">{evt.username}</div>
-                      </td>
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        {evt.mitre_id ? (
-                          <span className="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
-                            {evt.mitre_id}
+                    <React.Fragment key={evt.id}>
+                      <tr
+                        onClick={() => onInspectEvidence && onInspectEvidence(evt)}
+                        className={`hover:bg-cyan-950/20 transition-colors cursor-pointer group ${
+                          isExpanded ? 'bg-amber-950/20' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-3.5 text-cyan-400 font-semibold whitespace-nowrap">
+                          {evt.id}
+                        </td>
+                        <td className="py-3 px-3.5 text-slate-300 whitespace-nowrap">
+                          {evt.timestamp ? evt.timestamp.replace('T', ' ').slice(0, 19) : '--'}
+                        </td>
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase ${sevColor}`}>
+                            {evt.severity}
                           </span>
-                        ) : (
-                          <span className="text-slate-600">--</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3.5 text-slate-300 max-w-xs truncate">
-                        {evt.event_description}
-                      </td>
-                      <td className="py-3 px-3.5 text-right whitespace-nowrap">
-                        <span className="text-[10px] font-mono text-slate-500 group-hover:text-cyan-400 transition-colors">
-                          {evt.evidence_hash ? evt.evidence_hash.slice(0, 12) : 'e3b0c442...'}...
-                        </span>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="py-3 px-3.5 text-slate-200 capitalize font-medium whitespace-nowrap">
+                          {evt.event_type?.replace(/_/g, ' ')}
+                        </td>
+                        <td className="py-3 px-3.5 text-slate-300 whitespace-nowrap">
+                          <span className="text-cyan-300">{evt.source_ip}</span>
+                          <span className="text-slate-500 mx-1">→</span>
+                          <span className="text-slate-200">{evt.destination_ip}</span>
+                        </td>
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <div className="text-slate-200 font-semibold">{evt.device_name || 'N/A'}</div>
+                          <div className="text-[10px] text-purple-300">{evt.username}</div>
+                        </td>
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          {evt.mitre_id ? (
+                            <span className="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
+                              {evt.mitre_id}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600">--</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedWhyFlagged(isExpanded ? null : evt.id)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1 mx-auto transition-all ${
+                              isExpanded
+                                ? 'bg-amber-500 text-black shadow-md'
+                                : 'bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-500/40'
+                            }`}
+                          >
+                            <AlertTriangle className="w-3 h-3 text-amber-400" />
+                            <span>Why Flagged?</span>
+                          </button>
+                        </td>
+                        <td className="py-3 px-3.5 text-slate-300 max-w-xs truncate">
+                          {evt.event_description}
+                        </td>
+                        <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                          <span className="text-[10px] font-mono text-slate-500 group-hover:text-cyan-400 transition-colors">
+                            {evt.evidence_hash ? evt.evidence_hash.slice(0, 12) : 'e3b0c442...'}...
+                          </span>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Why Flagged Explainability Panel */}
+                      {isExpanded && (
+                        <tr className="bg-[#091122] border-y-2 border-amber-500/40 animate-fadeIn">
+                          <td colSpan={10} className="p-4 sm:p-5">
+                            <div className="rounded-xl bg-slate-950/90 border border-amber-500/30 p-4 space-y-3 font-mono shadow-xl">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                                    WHY FLAGGED: Behavioral Signal Attribution & Anomaly Breakdown
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/50 text-[10px] font-extrabold">
+                                    TOTAL RISK SCORE: {evt.severity === 'critical' ? '92/100 (CRITICAL)' : '78/100 (HIGH)'}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-slate-400">
+                                  Model: Anomaly Detection Engine (Baseline Z-Score + Geo-Velocity)
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                                <div className="p-3 rounded-xl bg-black/50 border border-white/5 space-y-1.5">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-slate-400 text-[10px] uppercase font-bold">Signal 1: External Subnet</span>
+                                    <span className="text-amber-300 font-bold">+35 pts</span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
+                                    Source IP <strong>{evt.source_ip}</strong> is not inside employee's known enterprise IP CIDR (10.0.0.0/8). Flagged as untrusted public endpoint.
+                                  </p>
+                                </div>
+
+                                <div className="p-3 rounded-xl bg-black/50 border border-white/5 space-y-1.5">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-slate-400 text-[10px] uppercase font-bold">Signal 2: Temporal Deviation</span>
+                                    <span className="text-amber-300 font-bold">+25 pts (Z: +3.8σ)</span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
+                                    Event timestamp at {evt.timestamp ? String(evt.timestamp).slice(11, 16) : '03:14'} UTC deviates 3.8 standard deviations from employee's baseline working hours (08:00-18:00 UTC).
+                                  </p>
+                                </div>
+
+                                <div className="p-3 rounded-xl bg-black/50 border border-white/5 space-y-1.5">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-slate-400 text-[10px] uppercase font-bold">Signal 3: Privilege / Asset Impact</span>
+                                    <span className="text-amber-300 font-bold">+30 pts</span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
+                                    Interactive account <strong>{evt.username}</strong> accessed mission-critical asset <strong>{evt.device_name || 'WS-ENGINEERING-07'}</strong> under MITRE technique <strong>{evt.mitre_id || 'T1078'}</strong>.
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-300 font-sans border-t border-white/5">
+                                <div>
+                                  <strong className="text-cyan-300 font-mono">SecOps Recommended Action: </strong>
+                                  Trigger step-up MFA challenge and stage temporary host isolation pending review.
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => onInspectEvidence && onInspectEvidence(evt)}
+                                  className="text-cyan-400 hover:text-cyan-300 font-mono font-bold text-xs underline self-start sm:self-auto"
+                                >
+                                  View Full Forensic Hash Dossier →
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}

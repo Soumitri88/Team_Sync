@@ -28,6 +28,44 @@ export const SecurityProvider = ({ children }) => {
   const [attackGraph, setAttackGraph] = useState(INITIAL_ATTACK_GRAPH);
   const [blastRadius, setBlastRadius] = useState(INITIAL_BLAST_RADIUS);
   const [actions, setActions] = useState(INITIAL_ACTIONS);
+  const [approvals, setApprovals] = useState([
+    {
+      id: "APPR-01",
+      incident_id: "INC-2026-881",
+      action_requested: "Quarantine Host & Terminate Harvester (PID 5124)",
+      target: "WS-ENGINEERING-07",
+      reviewer_name: "Alex Vance (SOC Incident Commander)",
+      decision: "APPROVED",
+      reason: "Confirmed data collection and staging of synthetic payroll records.",
+      timestamp: new Date(Date.now() - 120000).toISOString(),
+      status: "EXECUTED",
+      mitre_id: "T1059.001 / T1005"
+    },
+    {
+      id: "APPR-02",
+      incident_id: "INC-2026-882",
+      action_requested: "Block Controlled Receiver Egress Port 8000 via Windows Firewall",
+      target: "Controlled Receiver (127.0.0.1:8000)",
+      reviewer_name: "Pending Review",
+      decision: "PENDING",
+      reason: "Suspicious outbound TLS socket opened attempting 2,450 bytes exfiltration.",
+      timestamp: new Date(Date.now() - 60000).toISOString(),
+      status: "PENDING",
+      mitre_id: "T1048"
+    },
+    {
+      id: "APPR-03",
+      incident_id: "INC-2026-883",
+      action_requested: "Revoke Kerberos TGT & Invalidate Tokens for david.webb",
+      target: "david.webb (EMP-041)",
+      reviewer_name: "Pending Review",
+      decision: "PENDING",
+      reason: "High anomaly login risk score (78/100) from unseen external Tor IP.",
+      timestamp: new Date(Date.now() - 30000).toISOString(),
+      status: "PENDING",
+      mitre_id: "T1078"
+    }
+  ]);
   const [devices, setDevices] = useState(INITIAL_DEVICES);
   const [agentStatus, setAgentStatus] = useState({
     connected: false,
@@ -941,6 +979,84 @@ export const SecurityProvider = ({ children }) => {
     return verificationRecord;
   };
 
+  const submitApprovalDecision = async (approvalId, decision, reviewerName = "Alex Vance (SOC Incident Commander)", reason = "") => {
+    const nowStr = new Date().toISOString();
+    try {
+      await fetch('/api/admin/approvals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          incident_id: approvalId,
+          reviewer_name: reviewerName,
+          decision,
+          reason: reason || `Action decision marked as ${decision} by ${reviewerName}`,
+          action_requested: approvalId
+        })
+      });
+    } catch (e) {}
+
+    setApprovals(prev => prev.map(a => {
+      if (a.id === approvalId) {
+        return {
+          ...a,
+          decision,
+          reviewer_name: reviewerName,
+          reason: reason || a.reason,
+          timestamp: nowStr,
+          status: decision === 'APPROVED' ? 'EXECUTED' : decision === 'REJECTED' ? 'REJECTED' : 'ESCALATED'
+        };
+      }
+      return a;
+    }));
+
+    if (decision === 'APPROVED') {
+      // Execute containment on attack graph
+      setAttackGraph(prev => {
+        const prevGraph = prev || INITIAL_ATTACK_GRAPH;
+        return {
+          ...prevGraph,
+          summary: {
+            ...prevGraph.summary,
+            containment_status: "CONTAINED"
+          },
+          nodes: (prevGraph.nodes || []).map(n => ({
+            ...n,
+            data: {
+              ...n.data,
+              visual_state: 'contained'
+            }
+          })),
+          edges: (prevGraph.edges || []).map(e => ({
+            ...e,
+            animated: false,
+            data: {
+              ...e.data,
+              contained: true
+            }
+          }))
+        };
+      });
+
+      // Update devices
+      setDevices(prev => prev.map(d => 
+        (d.id === 'DEV-001' || d.name === 'WS-ENGINEERING-07') 
+          ? { ...d, status: 'isolated', security_posture: 'protected', active_pids: [] } 
+          : d
+      ));
+
+      setActiveAlert({
+        id: "ALERT-APPROVAL-EXEC",
+        title: `DEFENSE AUTHORIZED: ${decision}`,
+        description: `Remediation action '${approvalId}' approved and authorized by ${reviewerName}. Target contained.`,
+        device: "WS-ENGINEERING-07",
+        mitre: "RESPONSE-CONTAIN",
+        timestamp: nowStr
+      });
+
+      confetti({ particleCount: 130, spread: 85, origin: { y: 0.6 } });
+    }
+  };
+
   // ==================== GUIDED DEMO MODE LOGIC ====================
   // 9 Required Steps:
   // 1. Suspicious login detected
@@ -1072,6 +1188,9 @@ export const SecurityProvider = ({ children }) => {
         attackGraph,
         blastRadius,
         actions,
+        approvals,
+        setApprovals,
+        submitApprovalDecision,
         devices,
         agentStatus,
         fetchAgentStatus,

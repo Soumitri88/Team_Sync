@@ -135,6 +135,44 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const registerEmployee = async ({ username, password, full_name, employee_id, department, email }) => {
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          password,
+          full_name,
+          employee_id,
+          department,
+          email
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { success: true, message: `Account for ${full_name} (${employee_id}) created successfully.` };
+      }
+      return { success: false, error: data.detail || data.error || "Registration failed." };
+    } catch (e) {
+      // Offline fallback: store in DEMO_EMPLOYEES
+      const newKey = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+      DEMO_EMPLOYEES[newKey] = {
+        id: `usr-${Date.now().toString().slice(-4)}`,
+        name: full_name,
+        username,
+        employee_id,
+        department,
+        role: "employee",
+        role_label: `${department} Specialist`,
+        badge: "EMP-VERIFIED",
+        avatar: full_name.slice(0, 2).toUpperCase(),
+        portal: "employee"
+      };
+      return { success: true, message: `Account for ${full_name} (${employee_id}) created successfully (Offline mode).` };
+    }
+  };
+
   const loginDemoPersona = (personaKey, portalType = "admin") => {
     let selected = null;
     if (portalType === "employee") {
@@ -188,6 +226,7 @@ export const AuthProvider = ({ children }) => {
         isEmployee,
         loginWithCredentials,
         verifyMFA,
+        registerEmployee,
         loginDemoPersona,
         switchPortal,
         logout,

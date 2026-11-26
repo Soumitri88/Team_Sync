@@ -350,6 +350,12 @@ export const INITIAL_ATTACK_GRAPH = {
         stage: 1,
         is_critical_path: true,
         critical_path: true,
+        confidence: 0.95,
+        relationship_nature: "observed",
+        first_seen: new Date(Date.now() - 900000).toISOString(),
+        last_seen: new Date(Date.now() - 900000).toISOString(),
+        degree_centrality: 0.125,
+        pagerank: 0.082,
         metadata: { ip: "198.51.100.44", threat_actor: "APT-SIM-409", reputation: "Malicious External Origin" }
       }
     },
@@ -366,6 +372,12 @@ export const INITIAL_ATTACK_GRAPH = {
         stage: 1,
         is_critical_path: true,
         critical_path: true,
+        confidence: 0.92,
+        relationship_nature: "observed",
+        first_seen: new Date(Date.now() - 900000).toISOString(),
+        last_seen: new Date(Date.now() - 450000).toISOString(),
+        degree_centrality: 0.25,
+        pagerank: 0.145,
         metadata: { username: "david.webb", role: "Domain Engineer", device_affinity: "WS-ENGINEERING-07" }
       }
     },
@@ -383,6 +395,12 @@ export const INITIAL_ATTACK_GRAPH = {
         is_patient_zero: true,
         is_critical_path: true,
         critical_path: true,
+        confidence: 1.0,
+        relationship_nature: "observed",
+        first_seen: new Date(Date.now() - 900000).toISOString(),
+        last_seen: new Date().toISOString(),
+        degree_centrality: 0.625,
+        pagerank: 0.285,
         metadata: { ip: "10.0.2.14", os: "Windows 11 Enterprise (23H2)", role: "Workstation (Patient Zero)" }
       }
     },
@@ -399,6 +417,12 @@ export const INITIAL_ATTACK_GRAPH = {
         stage: 2,
         is_critical_path: true,
         critical_path: true,
+        confidence: 1.0,
+        relationship_nature: "observed",
+        first_seen: new Date(Date.now() - 750000).toISOString(),
+        last_seen: new Date(Date.now() - 750000).toISOString(),
+        degree_centrality: 0.25,
+        pagerank: 0.118,
         metadata: { pid: 4812, process_name: "python.exe", command_line: "python -c \"import time; print('Simulated Probe'); time.sleep(180)\"" }
       }
     },
@@ -415,6 +439,12 @@ export const INITIAL_ATTACK_GRAPH = {
         stage: 2,
         is_critical_path: true,
         critical_path: true,
+        confidence: 1.0,
+        relationship_nature: "observed",
+        first_seen: new Date(Date.now() - 750000).toISOString(),
+        last_seen: new Date(Date.now() - 150000).toISOString(),
+        degree_centrality: 0.375,
+        pagerank: 0.174,
         metadata: { username: "SYSTEM", privilege: "Root/Kernel OS Level", compromised_on: "WS-ENGINEERING-07" }
       }
     },
@@ -431,6 +461,12 @@ export const INITIAL_ATTACK_GRAPH = {
         stage: 3,
         is_critical_path: true,
         critical_path: true,
+        confidence: 1.0,
+        relationship_nature: "observed",
+        first_seen: new Date(Date.now() - 600000).toISOString(),
+        last_seen: new Date(Date.now() - 300000).toISOString(),
+        degree_centrality: 0.5,
+        pagerank: 0.212,
         metadata: { ip: "10.0.3.11", os: "Ubuntu 22.04 LTS", role: "Core Finance Storage" }
       }
     },
@@ -447,6 +483,12 @@ export const INITIAL_ATTACK_GRAPH = {
         stage: 4,
         is_critical_path: true,
         critical_path: true,
+        confidence: 1.0,
+        relationship_nature: "observed",
+        first_seen: new Date(Date.now() - 450000).toISOString(),
+        last_seen: new Date(Date.now() - 450000).toISOString(),
+        degree_centrality: 0.125,
+        pagerank: 0.098,
         metadata: { file: "financial_report_demo.txt", path: "/srv/shared/finance/Q3_Audit/", host: "SRV-FINANCE-01" }
       }
     },
@@ -463,6 +505,12 @@ export const INITIAL_ATTACK_GRAPH = {
         stage: 5,
         is_critical_path: true,
         critical_path: true,
+        confidence: 1.0,
+        relationship_nature: "observed",
+        first_seen: new Date(Date.now() - 300000).toISOString(),
+        last_seen: new Date(Date.now() - 300000).toISOString(),
+        degree_centrality: 0.125,
+        pagerank: 0.086,
         metadata: { destination: "adverse-egress.net:443", bytes_exfiltrated: "4.2 MB", protocol: "TLS Encrypted HTTPS:443" }
       }
     }
@@ -472,65 +520,65 @@ export const INITIAL_ATTACK_GRAPH = {
       id: "edge-1",
       source: "node-attacker-198.51.100.44",
       target: "node-user-david.webb",
-      label: "Stage 1: RDP Credential Abuse (T1078)",
+      label: "Stage 1: RDP Credential Abuse (T1078) [OBSERVED • 95%]",
       animated: true,
-      data: { severity: "critical", stage: 1, is_critical_path: true, protocol: "RDP:3389" }
+      data: { severity: "critical", stage: 1, is_critical_path: true, protocol: "RDP:3389", confidence: 0.95, relationship_nature: "observed" }
     },
     {
       id: "edge-2",
       source: "node-user-david.webb",
       target: "node-device-WS-ENGINEERING-07",
-      label: "Stage 1: Initial Workstation Breach",
+      label: "Stage 1: Initial Workstation Breach [OBSERVED • 100%]",
       animated: true,
-      data: { severity: "high", stage: 1, is_critical_path: true, protocol: "Kerberos Auth" }
+      data: { severity: "high", stage: 1, is_critical_path: true, protocol: "Kerberos Auth", confidence: 1.0, relationship_nature: "observed" }
     },
     {
       id: "edge-3",
       source: "node-device-WS-ENGINEERING-07",
       target: "node-proc-4812",
-      label: "Stage 2: Benign Process Spawn (PID 4812)",
+      label: "Stage 2: Benign Process Spawn (PID 4812) [OBSERVED • 100%]",
       animated: true,
-      data: { severity: "high", stage: 2, is_critical_path: true, protocol: "Process Creation" }
+      data: { severity: "high", stage: 2, is_critical_path: true, protocol: "Process Creation", confidence: 1.0, relationship_nature: "observed" }
     },
     {
       id: "edge-4",
       source: "node-device-WS-ENGINEERING-07",
       target: "node-user-SYSTEM",
-      label: "Stage 2: Token Impersonation (T1068)",
+      label: "Stage 2: Token Impersonation (T1068) [OBSERVED • 100%]",
       animated: true,
-      data: { severity: "critical", stage: 2, is_critical_path: true, protocol: "Local NamedPipe" }
+      data: { severity: "critical", stage: 2, is_critical_path: true, protocol: "Local NamedPipe", confidence: 1.0, relationship_nature: "observed" }
     },
     {
       id: "edge-5",
       source: "node-user-SYSTEM",
       target: "node-device-SRV-FINANCE-01",
-      label: "Stage 3: WinRM Lateral Pivot (T1021)",
+      label: "Stage 3: WinRM Lateral Pivot (T1021) [OBSERVED • 100%]",
       animated: true,
-      data: { severity: "critical", stage: 3, is_critical_path: true, protocol: "WinRM:5985" }
+      data: { severity: "critical", stage: 3, is_critical_path: true, protocol: "WinRM:5985", confidence: 1.0, relationship_nature: "observed" }
     },
     {
       id: "edge-6",
       source: "node-device-SRV-FINANCE-01",
       target: "node-canary-financial_report_demo.txt",
-      label: "Stage 4: Canary Trap Breach (DEFCON 1)",
+      label: "Stage 4: Canary Trap Breach (DEFCON 1) [OBSERVED • 100%]",
       animated: true,
-      data: { severity: "critical", stage: 4, is_critical_path: true, protocol: "SMB/FileRead" }
+      data: { severity: "critical", stage: 4, is_critical_path: true, protocol: "SMB/FileRead", confidence: 1.0, relationship_nature: "observed" }
     },
     {
       id: "edge-7",
       source: "node-device-SRV-FINANCE-01",
       target: "node-attacker-adverse-egress.net",
-      label: "Stage 5: Encrypted Exfiltration (T1048)",
+      label: "Stage 5: Encrypted Exfiltration (T1048) [OBSERVED • 100%]",
       animated: true,
-      data: { severity: "critical", stage: 5, is_critical_path: true, protocol: "HTTPS:443" }
+      data: { severity: "critical", stage: 5, is_critical_path: true, protocol: "HTTPS:443", confidence: 1.0, relationship_nature: "observed" }
     },
     {
       id: "edge-8",
       source: "node-user-SYSTEM",
       target: "node-device-WS-ENGINEERING-07",
-      label: "Stage 6: Persistent Service Daemon (T1543)",
+      label: "Stage 6: Persistent Service Daemon (T1543) [INFERRED • 82%]",
       animated: true,
-      data: { severity: "critical", stage: 6, is_critical_path: true, protocol: "ServiceController" }
+      data: { severity: "critical", stage: 6, is_critical_path: true, protocol: "ServiceController", confidence: 0.82, relationship_nature: "inferred" }
     }
   ]
 };

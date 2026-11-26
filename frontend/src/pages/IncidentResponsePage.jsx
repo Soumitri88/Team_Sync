@@ -19,13 +19,25 @@ import {
   Terminal,
   Copy,
   Check,
-  Globe
+  Globe,
+  XCircle,
+  ArrowUpRight,
+  FileSignature,
+  Clock
 } from 'lucide-react';
 import { useSecurity } from '../context/SecurityContext';
 import { useAuth } from '../context/AuthContext';
 
 export function IncidentResponsePage({ onNavigate }) {
-  const { actions, executeResponseAction, executeRemediationAndVerify, runProtectionDemo, stats } = useSecurity();
+  const { 
+    actions, 
+    approvals = [], 
+    submitApprovalDecision, 
+    executeResponseAction, 
+    executeRemediationAndVerify, 
+    runProtectionDemo, 
+    stats 
+  } = useSecurity();
   const { user } = useAuth();
   const [selectedTarget, setSelectedTarget] = useState({
     review_logins: 'david.webb',
@@ -40,6 +52,19 @@ export function IncidentResponsePage({ onNavigate }) {
   const [lastActionResult, setLastActionResult] = useState(null);
   const [protectionDemoSuccess, setProtectionDemoSuccess] = useState(null);
   const [copiedHash, setCopiedHash] = useState(false);
+  const [approvalFeedback, setApprovalFeedback] = useState(null);
+
+  const handleApprovalAction = async (approvalId, decision) => {
+    const reviewer = user?.name || "Alex Vance (SOC Incident Commander)";
+    await submitApprovalDecision(approvalId, decision, reviewer);
+    setApprovalFeedback({
+      id: approvalId,
+      decision,
+      reviewer,
+      time: new Date().toLocaleTimeString()
+    });
+    setTimeout(() => setApprovalFeedback(null), 6000);
+  };
 
   const responsePlaybooks = [
     {
@@ -169,6 +194,162 @@ export function IncidentResponsePage({ onNavigate }) {
             <ShieldCheck className="w-4 h-4 fill-black text-black" />
             <span>{isRunningProtectionDemo ? 'RUNNING CONTAINMENT...' : 'ENGAGE DEFENSIVE CONTAINMENT'}</span>
           </button>
+        </div>
+      </div>
+
+      {/* ==================== INTERACTIVE ADMIN APPROVAL WORKFLOW ==================== */}
+      <div className="p-5 rounded-2xl bg-[#090e1a]/95 border border-purple-500/40 shadow-2xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-purple-950/80 border border-purple-500/40 text-purple-400">
+              <FileSignature className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-white font-mono uppercase tracking-wider">
+                  Admin Approval Workflow & Authorization Queue
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-500/50 text-[10px] font-mono font-bold animate-pulse">
+                  {approvals.filter(a => a.decision === 'PENDING').length} PENDING DECISIONS
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-mono">
+                Real-time human-in-the-loop authorization. Approve, Reject, or Escalate containment actions to update immutable audit log & attack graph.
+              </p>
+            </div>
+          </div>
+          <div className="text-right font-mono text-[11px] text-slate-400">
+            <span>Operator: </span>
+            <span className="text-cyan-300 font-bold">{user?.name || "Alex Vance (SOC Incident Commander)"}</span>
+          </div>
+        </div>
+
+        {/* Live Feedback Toast Banner */}
+        {approvalFeedback && (
+          <div className={`p-3 rounded-xl border text-xs font-mono flex items-center justify-between animate-fadeIn ${
+            approvalFeedback.decision === 'APPROVED'
+              ? 'bg-emerald-950/90 border-emerald-500/60 text-emerald-200'
+              : approvalFeedback.decision === 'REJECTED'
+              ? 'bg-red-950/90 border-red-500/60 text-red-200'
+              : 'bg-amber-950/90 border-amber-500/60 text-amber-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>
+                <strong>{approvalFeedback.decision}</strong> recorded for [{approvalFeedback.id}] by <strong>{approvalFeedback.reviewer}</strong> at {approvalFeedback.time}. Cryptographic audit block committed & attack graph synchronized.
+              </span>
+            </div>
+            <span className="text-[10px] uppercase opacity-75">SHA-256 SEALED</span>
+          </div>
+        )}
+
+        {/* Approval Queue Items */}
+        <div className="grid grid-cols-1 gap-3.5">
+          {approvals.map((req) => {
+            const isPending = req.decision === 'PENDING';
+            const isApproved = req.decision === 'APPROVED';
+            const isRejected = req.decision === 'REJECTED';
+            const isEscalated = req.decision === 'ESCALATED';
+
+            return (
+              <div
+                key={req.id}
+                className={`p-4 rounded-xl border transition-all ${
+                  isPending
+                    ? 'bg-slate-900/90 border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
+                    : isApproved
+                    ? 'bg-emerald-950/30 border-emerald-500/40 opacity-90'
+                    : isRejected
+                    ? 'bg-red-950/30 border-red-500/40 opacity-80'
+                    : 'bg-purple-950/30 border-purple-500/40 opacity-85'
+                }`}
+              >
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-mono font-bold text-white">
+                        {req.id}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/60 text-slate-300 border border-white/10">
+                        {req.incident_id}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
+                        {req.mitre_id}
+                      </span>
+                      <span className={`text-[10px] font-mono font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider ${
+                        isPending
+                          ? 'bg-amber-500 text-black animate-pulse'
+                          : isApproved
+                          ? 'bg-emerald-600 text-white'
+                          : isRejected
+                          ? 'bg-red-600 text-white'
+                          : 'bg-purple-600 text-white'
+                      }`}>
+                        STATUS: {req.decision}
+                      </span>
+                    </div>
+
+                    <div className="text-xs sm:text-sm font-bold text-cyan-300 font-mono">
+                      Proposed Defense: {req.action_requested}
+                    </div>
+
+                    <div className="text-[11px] text-slate-300 font-sans leading-relaxed">
+                      <strong className="text-slate-400">Detection Trigger: </strong> {req.reason}
+                    </div>
+
+                    <div className="flex items-center gap-4 text-[10px] font-mono text-slate-400 pt-1 flex-wrap">
+                      <span>Target: <strong className="text-slate-200">{req.target}</strong></span>
+                      <span>Reviewer: <strong className="text-slate-200">{req.reviewer_name}</strong></span>
+                      <span>Timestamp: <strong className="text-slate-200">{new Date(req.timestamp).toLocaleTimeString()} UTC</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Decision Action Buttons */}
+                  <div className="flex items-center gap-2 flex-shrink-0 pt-2 lg:pt-0">
+                    {isPending ? (
+                      <>
+                        <button
+                          onClick={() => handleApprovalAction(req.id, 'APPROVED')}
+                          className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-extrabold text-xs font-mono flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-transform hover:scale-105 active:scale-95"
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          <span>APPROVE</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleApprovalAction(req.id, 'REJECTED')}
+                          className="px-3 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-500/60 text-red-200 font-bold text-xs font-mono flex items-center gap-1.5 transition-colors"
+                        >
+                          <XCircle className="w-3.5 h-3.5 text-red-400" />
+                          <span>REJECT</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleApprovalAction(req.id, 'ESCALATED')}
+                          className="px-3 py-2 rounded-xl bg-amber-950/80 hover:bg-amber-900 border border-amber-500/60 text-amber-200 font-bold text-xs font-mono flex items-center gap-1.5 transition-colors"
+                        >
+                          <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
+                          <span>ESCALATE</span>
+                        </button>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-mono text-slate-400">
+                          Decision recorded at {new Date(req.timestamp).toLocaleTimeString()}
+                        </span>
+                        <button
+                          onClick={() => handleApprovalAction(req.id, 'PENDING')}
+                          className="text-[10px] font-mono text-cyan-400 hover:underline px-2 py-1 rounded bg-slate-800"
+                        >
+                          Reopen Review
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

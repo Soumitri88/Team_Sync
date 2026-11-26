@@ -814,13 +814,21 @@ async def run_protection_demo():
 # ==================== PHASE 4 & 5: REAL AUTHENTICATION & EMPLOYEE PORTAL APIS ====================
 from pydantic import BaseModel
 from .db_sqlite import db_mgr, hash_password, verify_password
-from .auth_service import authenticate_user, verify_mfa, record_audit_log
+from .auth_service import authenticate_user, verify_mfa, record_audit_log, register_employee
 
 class LoginPayload(BaseModel):
     username: str
     password: str
     ip_address: Optional[str] = "127.0.0.1"
     device_name: Optional[str] = "Web-Portal-Client"
+
+class RegisterPayload(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    employee_id: str
+    department: str
+    email: Optional[str] = None
 
 class MFAPayload(BaseModel):
     session_id: str
@@ -851,6 +859,20 @@ def api_auth_login(payload: LoginPayload):
         ip_address=payload.ip_address,
         device_name=payload.device_name
     )
+    return result
+
+@app.post("/api/auth/register")
+def api_auth_register(payload: RegisterPayload):
+    result = register_employee(
+        username=payload.username,
+        password=payload.password,
+        full_name=payload.full_name,
+        employee_id=payload.employee_id,
+        department=payload.department,
+        email=payload.email
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Registration failed"))
     return result
 
 @app.post("/api/auth/verify-mfa")

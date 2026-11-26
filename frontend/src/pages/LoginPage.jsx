@@ -18,14 +18,21 @@ import {
 import { useAuth, DEMO_ADMINS, DEMO_EMPLOYEES } from '../context/AuthContext';
 
 export const LoginPage = ({ onLoginSuccess }) => {
-  const { loginDemoPersona, loginWithCredentials, verifyMFA } = useAuth();
+  const { loginDemoPersona, loginWithCredentials, verifyMFA, registerEmployee } = useAuth();
   const [portalType, setPortalType] = useState('admin'); // 'admin' | 'employee'
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Manual credentials state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [successBanner, setSuccessBanner] = useState(null);
+
+  // Registration state
+  const [regFullName, setRegFullName] = useState('');
+  const [regEmpId, setRegEmpId] = useState('EMP-105');
+  const [regDept, setRegDept] = useState('Engineering');
 
   // MFA Challenge State
   const [mfaChallenge, setMfaChallenge] = useState(null); // { session_id, simulated_otp, risk_score, risk_signals }
@@ -34,6 +41,35 @@ export const LoginPage = ({ onLoginSuccess }) => {
   // Selected persona for quick login
   const [selectedAdmin, setSelectedAdmin] = useState('commander');
   const [selectedEmployee, setSelectedEmployee] = useState('david');
+
+  const handleRegister = async (e) => {
+    e?.preventDefault();
+    if (!username || !password || !regFullName || !regEmpId) {
+      setErrorMsg('Please complete all required registration fields.');
+      return;
+    }
+    setErrorMsg(null);
+    setIsAuthenticating(true);
+
+    try {
+      const res = await registerEmployee({
+        username,
+        password,
+        full_name: regFullName,
+        employee_id: regEmpId,
+        department: regDept,
+        email: `${username}@novatech.internal`
+      });
+      if (res.success) {
+        setSuccessBanner(res.message);
+        setIsRegistering(false);
+      } else {
+        setErrorMsg(res.error || 'Registration failed.');
+      }
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
   const handleManualLogin = async (e) => {
     e?.preventDefault();
@@ -151,6 +187,17 @@ export const LoginPage = ({ onLoginSuccess }) => {
 
         {/* Content Area */}
         <div className="p-5 sm:p-6 space-y-4">
+          {/* Success Banner */}
+          {successBanner && (
+            <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/60 text-emerald-200 text-xs font-mono flex items-start gap-2.5 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block">Registration Successful:</span>
+                <span className="text-[11px] leading-relaxed">{successBanner}</span>
+              </div>
+            </div>
+          )}
+
           {/* Error / Lockout Alert Banner */}
           {errorMsg && (
             <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-500/60 text-red-200 text-xs font-mono flex items-start gap-2.5 animate-fadeIn">
@@ -278,66 +325,165 @@ export const LoginPage = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
-              {/* Or Manual Credentials Login */}
+              {/* Or Manual Credentials Login / Registration */}
               <div className="pt-2 border-t border-slate-800">
-                <span className="text-[10px] font-mono uppercase text-slate-500 block mb-2 text-center">
-                  Or Sign In with Corporate Credentials
-                </span>
-
-                <form onSubmit={handleManualLogin} className="space-y-3 font-mono text-xs">
-                  <div>
-                    <label className="text-slate-400 block mb-1">
-                      {portalType === 'admin' ? 'Operator Username:' : 'Employee ID or Username:'}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={username}
-                      onChange={e => setUsername(e.target.value)}
-                      placeholder={portalType === 'admin' ? 'avance.soc' : 'david.webb or EMP-041'}
-                      className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-slate-400 block mb-1">Account Password:</label>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder="Enter password (e.g. Employee@2026!)"
-                      className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                    <span>Lockout rule: 3 failed attempts max</span>
+                {portalType === 'employee' && (
+                  <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-black/60 border border-slate-800 text-xs font-mono mb-3">
                     <button
                       type="button"
-                      onClick={() => {
-                        setUsername(portalType === 'admin' ? 'avance.soc' : 'david.webb');
-                        setPassword(portalType === 'admin' ? 'PloyWeb@2026!' : 'Employee@2026!');
-                      }}
-                      className="text-cyan-400 hover:underline"
+                      onClick={() => { setIsRegistering(false); setErrorMsg(null); }}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                        !isRegistering ? 'bg-emerald-500 text-black shadow' : 'text-slate-400 hover:text-white'
+                      }`}
                     >
-                      Fill Demo Credentials
+                      Employee Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setIsRegistering(true); setErrorMsg(null); }}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                        isRegistering ? 'bg-emerald-500 text-black shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Register New Account
                     </button>
                   </div>
+                )}
 
-                  <button
-                    type="submit"
-                    disabled={isAuthenticating}
-                    className={`w-full py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
-                      portalType === 'admin'
-                        ? 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-cyan-500/20'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
-                    }`}
-                  >
-                    <span>{isAuthenticating ? 'AUTHENTICATING...' : `LOG IN TO ${portalType.toUpperCase()} PORTAL`}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </form>
+                {isRegistering && portalType === 'employee' ? (
+                  /* Employee Registration Form */
+                  <form onSubmit={handleRegister} className="space-y-3 font-mono text-xs animate-fadeIn">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-slate-400 block mb-1">Full Legal Name:</label>
+                        <input
+                          type="text"
+                          required
+                          value={regFullName}
+                          onChange={e => setRegFullName(e.target.value)}
+                          placeholder="e.g. Jane Foster"
+                          className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-slate-400 block mb-1">Employee ID:</label>
+                        <input
+                          type="text"
+                          required
+                          value={regEmpId}
+                          onChange={e => setRegEmpId(e.target.value)}
+                          placeholder="e.g. EMP-109"
+                          className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-slate-400 block mb-1">Corporate Department:</label>
+                        <select
+                          value={regDept}
+                          onChange={e => setRegDept(e.target.value)}
+                          className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                        >
+                          <option value="Engineering">Engineering</option>
+                          <option value="Operations">Operations</option>
+                          <option value="Finance">Finance & Accounting</option>
+                          <option value="Security">InfoSec & IT</option>
+                          <option value="Legal">Legal & Compliance</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-slate-400 block mb-1">Corporate Username:</label>
+                        <input
+                          type="text"
+                          required
+                          value={username}
+                          onChange={e => setUsername(e.target.value)}
+                          placeholder="e.g. jane.foster"
+                          className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-slate-400 block mb-1">Create Password (PBKDF2 Hashed):</label>
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="Choose a strong password (min 8 chars)"
+                        className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isAuthenticating}
+                      className="w-full py-3 rounded-xl font-black text-xs bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all mt-2"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>{isAuthenticating ? 'REGISTERING...' : 'REGISTER EMPLOYEE ACCOUNT'}</span>
+                    </button>
+                  </form>
+                ) : (
+                  /* Standard Login Form */
+                  <form onSubmit={handleManualLogin} className="space-y-3 font-mono text-xs">
+                    <div>
+                      <label className="text-slate-400 block mb-1">
+                        {portalType === 'admin' ? 'Operator Username:' : 'Employee ID or Username:'}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                        placeholder={portalType === 'admin' ? 'avance.soc' : 'david.webb or EMP-041'}
+                        className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-slate-400 block mb-1">Account Password:</label>
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="Enter password (e.g. Employee@2026!)"
+                        className="w-full bg-[#070b14] border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                      <span>Lockout rule: 3 failed attempts max</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUsername(portalType === 'admin' ? 'avance.soc' : 'david.webb');
+                          setPassword(portalType === 'admin' ? 'PloyWeb@2026!' : 'Employee@2026!');
+                        }}
+                        className="text-cyan-400 hover:underline"
+                      >
+                        Fill Demo Credentials
+                      </button>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isAuthenticating}
+                      className={`w-full py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
+                        portalType === 'admin'
+                          ? 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-cyan-500/20'
+                          : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
+                      }`}
+                    >
+                      <span>{isAuthenticating ? 'AUTHENTICATING...' : `LOG IN TO ${portalType.toUpperCase()} PORTAL`}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </form>
+                )}
               </div>
             </>
           )}

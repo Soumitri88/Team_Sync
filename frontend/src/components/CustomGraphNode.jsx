@@ -115,16 +115,25 @@ export const CustomGraphNode = memo(({ data, selected }) => {
     metadata = {}, 
     is_critical_path,
     is_patient_zero,
-    stage = 1
+    stage = 1,
+    confidence = 1.0,
+    relationship_nature = 'observed',
+    first_seen,
+    last_seen,
+    pagerank,
+    degree_centrality
   } = data;
 
   const isCritical = Boolean(is_critical_path || severity === 'critical');
   const theme = getNodeTheme(type, visual_state, isCritical, is_patient_zero);
   const Icon = theme.icon;
 
+  const isObserved = relationship_nature === 'observed';
+  const confPct = Math.round((confidence || 1.0) * 100);
+
   return (
     <div
-      className={`relative min-w-[210px] max-w-[260px] rounded-2xl border-2 p-3.5 transition-all duration-300 cursor-pointer shadow-xl backdrop-blur-md ${
+      className={`relative min-w-[220px] max-w-[270px] rounded-2xl border-2 p-3.5 transition-all duration-300 cursor-pointer shadow-xl backdrop-blur-md ${
         theme.bg
       } ${
         selected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-[#070b14] scale-105' : ''
@@ -138,25 +147,38 @@ export const CustomGraphNode = memo(({ data, selected }) => {
       />
 
       {/* Top Badges */}
-      <div className="absolute -top-3 left-3 flex items-center gap-1.5 z-10">
-        <span className="px-2 py-0.5 rounded-full bg-slate-950/90 border border-slate-700 text-[9px] font-mono font-bold text-slate-300">
-          S{stage}
+      <div className="absolute -top-3 left-3 right-3 flex items-center justify-between gap-1 z-10">
+        <div className="flex items-center gap-1.5">
+          <span className="px-2 py-0.5 rounded-full bg-slate-950/90 border border-slate-700 text-[9px] font-mono font-bold text-slate-300">
+            S{stage}
+          </span>
+          {visual_state === 'contained' ? (
+            <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-[9px] font-bold uppercase text-white flex items-center gap-1 shadow">
+              <ShieldCheck className="w-2.5 h-2.5" />
+              Contained
+            </span>
+          ) : isCritical ? (
+            <span className="px-2 py-0.5 rounded-full bg-red-600 text-[9px] font-bold uppercase text-white flex items-center gap-1 shadow animate-pulse">
+              <Flame className="w-2.5 h-2.5" />
+              Kill-Chain
+            </span>
+          ) : null}
+        </div>
+
+        {/* Observed vs Inferred Confidence Badge */}
+        <span
+          className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider shadow-sm border ${
+            isObserved
+              ? 'bg-cyan-950/90 text-cyan-300 border-cyan-500/50'
+              : 'bg-purple-950/90 text-purple-300 border-purple-500/50'
+          }`}
+        >
+          {isObserved ? 'OBSERVED' : 'INFERRED'} {confPct}%
         </span>
-        {visual_state === 'contained' ? (
-          <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-[9px] font-bold uppercase text-white flex items-center gap-1 shadow">
-            <ShieldCheck className="w-2.5 h-2.5" />
-            Contained
-          </span>
-        ) : isCritical ? (
-          <span className="px-2 py-0.5 rounded-full bg-red-600 text-[9px] font-bold uppercase text-white flex items-center gap-1 shadow animate-pulse">
-            <Flame className="w-2.5 h-2.5" />
-            Attack Path
-          </span>
-        ) : null}
       </div>
 
       {/* Header Info */}
-      <div className="flex items-start gap-2.5 mt-1 mb-2">
+      <div className="flex items-start gap-2.5 mt-1.5 mb-2">
         <div className="p-2 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center flex-shrink-0 shadow-inner">
           <Icon className={`w-4 h-4 ${theme.iconColor}`} />
         </div>
@@ -198,6 +220,27 @@ export const CustomGraphNode = memo(({ data, selected }) => {
             <span className="truncate max-w-[140px] text-rose-200">{metadata.destination}</span>
           </div>
         )}
+
+        {/* Timestamps: First Seen & Last Seen */}
+        {first_seen && (
+          <div className="flex justify-between items-center text-[9px] text-slate-400">
+            <span>Telemetry:</span>
+            <span className="text-slate-300 truncate max-w-[140px]">
+              {String(first_seen).slice(11, 19)} → {last_seen ? String(last_seen).slice(11, 19) : 'Active'} UTC
+            </span>
+          </div>
+        )}
+
+        {/* NetworkX Topology Scores */}
+        {(pagerank !== undefined || degree_centrality !== undefined) && (
+          <div className="flex justify-between items-center text-[8.5px] text-slate-400">
+            <span>Topology:</span>
+            <span className="text-cyan-300 font-mono">
+              PR: {pagerank ?? 0.15} | DC: {degree_centrality ?? 0.25}
+            </span>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mt-1 text-[9px]">
           <span className="text-slate-500 uppercase tracking-wider">
             {visual_state.replace('-', ' ')}
