@@ -125,7 +125,7 @@ export const EmployeePortalPage = ({ onNavigate }) => {
           setData(resData);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [user]);
 
   const handlePasswordChange = async (e) => {
@@ -227,11 +227,10 @@ export const EmployeePortalPage = ({ onNavigate }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all whitespace-nowrap ${
-                isActive
-                  ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50 shadow-neon-cyan'
-                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all whitespace-nowrap ${isActive
+                ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50 shadow-neon-cyan'
+                : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
@@ -338,13 +337,12 @@ export const EmployeePortalPage = ({ onNavigate }) => {
                       <td className="py-2 px-3 text-cyan-300">{evt.ip_address}</td>
                       <td className="py-2 px-3 text-slate-300">{evt.device_name}</td>
                       <td className="py-2 px-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          evt.risk_level === 'HIGH'
-                            ? 'bg-red-950 text-red-300 border border-red-500/40'
-                            : evt.risk_level === 'MEDIUM'
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${evt.risk_level === 'HIGH'
+                          ? 'bg-red-950 text-red-300 border border-red-500/40'
+                          : evt.risk_level === 'MEDIUM'
                             ? 'bg-amber-950 text-amber-300 border border-amber-500/40'
                             : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
-                        }`}>
+                          }`}>
                           {evt.risk_level} ({evt.risk_score} pts)
                         </span>
                       </td>
@@ -388,13 +386,12 @@ export const EmployeePortalPage = ({ onNavigate }) => {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-white">{evt.event_type}</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      evt.risk_level === 'HIGH'
-                        ? 'bg-red-950 text-red-300 border border-red-500/40'
-                        : evt.risk_level === 'MEDIUM'
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${evt.risk_level === 'HIGH'
+                      ? 'bg-red-950 text-red-300 border border-red-500/40'
+                      : evt.risk_level === 'MEDIUM'
                         ? 'bg-amber-950 text-amber-300 border border-amber-500/40'
                         : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
-                    }`}>
+                      }`}>
                       {evt.risk_level} RISK ({evt.risk_score} / 100)
                     </span>
                   </div>
@@ -479,11 +476,10 @@ export const EmployeePortalPage = ({ onNavigate }) => {
           </div>
 
           {passwordMsg && (
-            <div className={`p-3 rounded-xl text-xs font-mono ${
-              passwordMsg.type === 'success'
-                ? 'bg-emerald-950/80 text-emerald-200 border border-emerald-500/40'
-                : 'bg-red-950/80 text-red-200 border border-red-500/40'
-            }`}>
+            <div className={`p-3 rounded-xl text-xs font-mono ${passwordMsg.type === 'success'
+              ? 'bg-emerald-950/80 text-emerald-200 border border-emerald-500/40'
+              : 'bg-red-950/80 text-red-200 border border-red-500/40'
+              }`}>
               {passwordMsg.text}
             </div>
           )}
