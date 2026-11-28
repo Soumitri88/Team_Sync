@@ -271,9 +271,30 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
       setActionStatusMsg(`Account ${emp.username} set to ${newLockState === 1 ? 'LOCKED' : 'UNLOCKED'} (Live Session Updated).`);
     }
 
-    setEmployees(prev => prev.map(e => e.user_id === emp.user_id ? { ...e, is_locked: newLockState, failed_attempts: 0 } : e));
+    const auditLogEntry = {
+      id: `LH-${Date.now().toString().slice(-4)}`,
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC',
+      ip_address: "10.0.0.1 (SOC Console)",
+      device: "SOC-ADMIN-MGR",
+      risk_score: newLockState === 1 ? 95.0 : 10.0,
+      risk_level: newLockState === 1 ? "CRITICAL" : "LOW",
+      status: newLockState === 1 ? "ACCOUNT_LOCKED" : "ACCOUNT_UNLOCKED",
+      note: `Administrative ${newLockState === 1 ? 'lockout enforced' : 'lockout cleared'} by ${user?.name || 'SOC Commander'}. Session tokens updated.`
+    };
+
+    setEmployees(prev => prev.map(e => e.user_id === emp.user_id ? {
+      ...e,
+      is_locked: newLockState,
+      failed_attempts: 0,
+      login_history: [auditLogEntry, ...(e.login_history || [])]
+    } : e));
     if (selectedEmp && selectedEmp.user_id === emp.user_id) {
-      setSelectedEmp(prev => ({ ...prev, is_locked: newLockState, failed_attempts: 0 }));
+      setSelectedEmp(prev => ({
+        ...prev,
+        is_locked: newLockState,
+        failed_attempts: 0,
+        login_history: [auditLogEntry, ...(prev.login_history || [])]
+      }));
     }
     setTimeout(() => setActionStatusMsg(null), 4000);
   };
@@ -344,8 +365,8 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
 
   const filteredEmployees = employees.filter(e => {
     const matchesSearch = e.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          e.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          e.employee_id?.toLowerCase().includes(searchQuery.toLowerCase());
+      e.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.employee_id?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDept = departmentFilter === 'ALL' || e.department === departmentFilter;
     return matchesSearch && matchesDept;
   });
@@ -507,11 +528,10 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
 
                       <button
                         onClick={() => handleToggleLock(emp)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                          emp.is_locked === 1
-                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-neon-emerald'
-                            : 'bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/40'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${emp.is_locked === 1
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-neon-emerald'
+                          : 'bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/40'
+                          }`}
                       >
                         {emp.is_locked === 1 ? (
                           <>
@@ -566,7 +586,7 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
 
             {/* Modal Body */}
             <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs">
-              
+
               {/* Baseline Summary Card */}
               <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
@@ -643,24 +663,22 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
                             {lh.device}
                           </td>
                           <td className="py-2.5 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              lh.risk_level === 'CRITICAL' || lh.risk_score >= 80
-                                ? 'bg-red-950 text-red-300 border border-red-500/40'
-                                : lh.risk_level === 'MEDIUM' || lh.risk_score >= 40
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${lh.risk_level === 'CRITICAL' || lh.risk_score >= 80
+                              ? 'bg-red-950 text-red-300 border border-red-500/40'
+                              : lh.risk_level === 'MEDIUM' || lh.risk_score >= 40
                                 ? 'bg-amber-950 text-amber-300 border border-amber-500/40'
                                 : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
-                            }`}>
+                              }`}>
                               {lh.risk_score.toFixed(1)} • {lh.risk_level}
                             </span>
                           </td>
                           <td className="py-2.5 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              lh.status === 'BLOCKED'
-                                ? 'bg-red-900/60 text-red-200'
-                                : lh.status.includes('MFA')
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${lh.status === 'BLOCKED'
+                              ? 'bg-red-900/60 text-red-200'
+                              : lh.status.includes('MFA')
                                 ? 'bg-amber-900/60 text-amber-200'
                                 : 'bg-emerald-900/60 text-emerald-200'
-                            }`}>
+                              }`}>
                               {lh.status}
                             </span>
                           </td>
@@ -697,11 +715,10 @@ export const EmployeeManagementPage = ({ onInspectEvidence }) => {
 
                 <button
                   onClick={() => handleToggleLock(selectedEmp)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                    selectedEmp.is_locked === 1
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-neon-emerald'
-                      : 'bg-red-950 hover:bg-red-900 text-red-200 border border-red-500/50'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${selectedEmp.is_locked === 1
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-neon-emerald'
+                    : 'bg-red-950 hover:bg-red-900 text-red-200 border border-red-500/50'
+                    }`}
                 >
                   {selectedEmp.is_locked === 1 ? (
                     <>

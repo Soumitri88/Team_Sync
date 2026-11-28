@@ -155,9 +155,16 @@ export const Navbar = ({ currentPath, onNavigate, onToggleSidebar }) => {
           {/* Portal Switcher Button */}
           <button
             onClick={() => {
-              if (activePortal === 'admin') switchPortal('employee');
-              else if (activePortal === 'employee') switchPortal('customer');
-              else switchPortal('admin');
+              if (activePortal === 'admin') {
+                switchPortal('employee');
+                if (onNavigate) onNavigate('/employee-portal');
+              } else if (activePortal === 'employee') {
+                switchPortal('customer');
+                if (onNavigate) onNavigate('/customer-portal');
+              } else {
+                switchPortal('admin');
+                if (onNavigate) onNavigate('/');
+              }
             }}
             title="Cycle between Master SOC Portal, Employee Portal, and Customer Portal"
             className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-mono font-bold border transition-all flex items-center gap-1.5 shadow-sm ${

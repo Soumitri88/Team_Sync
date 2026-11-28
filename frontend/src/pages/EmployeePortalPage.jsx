@@ -201,7 +201,10 @@ export const EmployeePortalPage = ({ onNavigate }) => {
           </div>
 
           <button
-            onClick={() => switchPortal ? switchPortal('admin') : onNavigate && onNavigate('/')}
+            onClick={() => {
+              if (switchPortal) switchPortal('admin');
+              if (onNavigate) onNavigate('/');
+            }}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
           >
             <Sliders className="w-4 h-4" />

@@ -160,8 +160,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
       raw: node.data
     });
     setIsDrawerOpen(true);
-    if (onInspectEvidence) onInspectEvidence(node);
-  }, [onInspectEvidence]);
+  }, []);
 
   const onEdgeClick = useCallback((event, edge) => {
     setSelectedEntity({
@@ -179,8 +178,7 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
       raw: edge.data
     });
     setIsDrawerOpen(true);
-    if (onInspectEvidence) onInspectEvidence(edge.data);
-  }, [onInspectEvidence]);
+  }, []);
 
   const handleExportNetworkX = () => {
     const networkxData = {
@@ -667,6 +665,16 @@ export const TraceGraphPage = ({ onInspectEvidence }) => {
                 <ShieldAlert className="w-4 h-4 text-purple-400" />
                 <span>Deep "Why Flagged?" Diagnostic</span>
               </button>
+
+              {onInspectEvidence && (
+                <button
+                  onClick={() => onInspectEvidence(selectedEntity?.raw || selectedEntity)}
+                  className="w-full py-2 px-3 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/50 text-cyan-300 font-mono font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-neon-cyan"
+                >
+                  <Hash className="w-4 h-4 text-cyan-400" />
+                  <span>Inspect SHA-256 Forensic Dossier</span>
+                </button>
+              )}
 
               <button
                 onClick={() => {

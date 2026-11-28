@@ -358,6 +358,32 @@ export const SecurityProvider = ({ children }) => {
   }, [fetchAttackGraph, fetchBlastRadius, fetchDashboardStats, fetchCanaries, fetchEvidenceLedger, refreshAll]);
 
   // ==================== SIMULATION CONTROLS ====================
+  const updateGraphForStep = (step) => {
+    const rawNodes = INITIAL_ATTACK_GRAPH.nodes;
+    const rawEdges = INITIAL_ATTACK_GRAPH.edges;
+    const nodesCount = Math.min(rawNodes.length, Math.max(2, Math.ceil((step / 6) * rawNodes.length)));
+    const edgesCount = Math.min(rawEdges.length, Math.max(1, Math.ceil((step / 6) * rawEdges.length)));
+    
+    setAttackGraph({
+      ...INITIAL_ATTACK_GRAPH,
+      summary: {
+        ...INITIAL_ATTACK_GRAPH.summary,
+        total_nodes: nodesCount,
+        total_edges: edgesCount,
+        containment_status: step >= 6 ? "ACTIVE_INTRUSION" : "PROPAGATING"
+      },
+      nodes: rawNodes.slice(0, nodesCount),
+      edges: rawEdges.slice(0, edgesCount)
+    });
+
+    setStats(prev => prev ? {
+      ...prev,
+      total_events: Math.max(prev.total_events || 0, step),
+      overall_status: step >= 3 ? "CRITICAL_THREAT" : "ELEVATED_RISK",
+      threat_level: step >= 3 ? "DEFCON 1 - CRITICAL" : "DEFCON 3 - ELEVATED"
+    } : prev);
+  };
+
   const startSimulation = async (scenarioId = 'multi_stage', speed = 1.0) => {
     try {
       const res = await fetch('/api/simulator/start', {
@@ -388,6 +414,7 @@ export const SecurityProvider = ({ children }) => {
       progress_pct: Math.round((1 / activeEventsList.length) * 100)
     });
     setEvents([activeEventsList[0]]);
+    updateGraphForStep(1);
 
     let step = 1;
     simTimerRef.current = setInterval(() => {
@@ -402,6 +429,7 @@ export const SecurityProvider = ({ children }) => {
           progress_pct: Math.round((step / activeEventsList.length) * 100)
         });
         setEvents(activeEventsList.slice(0, step));
+        updateGraphForStep(step);
         if (step === activeEventsList.length) {
           clearInterval(simTimerRef.current);
           confetti({ particleCount: 100, spread: 70 });
@@ -477,6 +505,7 @@ export const SecurityProvider = ({ children }) => {
     setSimState(prev => {
       const nextStep = Math.min(6, (prev.current_step || 0) + 1);
       setEvents(INITIAL_EVENTS.slice(0, nextStep));
+      updateGraphForStep(nextStep);
       return {
         ...prev,
         current_step: nextStep,
@@ -638,6 +667,16 @@ export const SecurityProvider = ({ children }) => {
         overall_status: "THREAT_CONTAINED",
         threat_level: "DEFCON 5 - CONTAINED",
         compromised_devices_count: Math.max(0, (prev.compromised_devices_count || 1) - 1)
+      } : prev);
+      setBlastRadius(prev => prev ? {
+        ...prev,
+        impact_score: 0.0,
+        containment_status: "CONTAINED",
+        compromised_devices: (prev.compromised_devices || []).map(d => ({
+          ...d,
+          status: "isolated",
+          posture: "protected"
+        }))
       } : prev);
       setActiveAlert(null);
     } else if (actionType === 'revoke_session' || actionType === 'password_change') {

@@ -24,7 +24,7 @@ import { useAuth } from './context/AuthContext';
 import { useSecurity } from './context/SecurityContext';
 
 export function App() {
-  const { isAuthenticated, activePortal } = useAuth();
+  const { isAuthenticated, activePortal, switchPortal } = useAuth();
   const { isJudgeModalOpen, setIsJudgeModalOpen } = useSecurity();
   const [currentPath, setCurrentPath] = useState('/');
   const [inspectedItem, setInspectedItem] = useState(null);
@@ -36,6 +36,13 @@ export function App() {
   }
 
   const handleNavigate = (path) => {
+    if (path === '/customer-portal') {
+      if (switchPortal) switchPortal('customer');
+    } else if (path === '/employee-portal') {
+      if (switchPortal) switchPortal('employee');
+    } else if (activePortal !== 'admin') {
+      if (switchPortal) switchPortal('admin');
+    }
     setCurrentPath(path);
     setIsMobileNavOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -46,13 +53,6 @@ export function App() {
   };
 
   const renderActivePage = () => {
-    if (activePortal === 'customer' && currentPath !== '/settings') {
-      return <CustomerPortalPage onNavigate={handleNavigate} />;
-    }
-    if (activePortal === 'employee' && currentPath !== '/settings') {
-      return <EmployeePortalPage onNavigate={handleNavigate} />;
-    }
-
     switch (currentPath) {
       case '/':
         return <DashboardPage onNavigate={handleNavigate} onInspectEvidence={handleInspectEvidence} />;
@@ -129,6 +129,7 @@ export function App() {
       <LiveJudgeDemoModal
         isOpen={isJudgeModalOpen}
         onClose={() => setIsJudgeModalOpen(false)}
+        onNavigate={handleNavigate}
       />
     </div>
   );

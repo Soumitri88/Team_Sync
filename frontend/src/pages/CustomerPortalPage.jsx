@@ -115,6 +115,24 @@ export const CustomerPortalPage = ({ onNavigate }) => {
     setTimeout(() => setActionMsg(null), 4000);
   };
 
+  const handleTerminateSession = (sessionId) => {
+    setCustomerData(prev => ({
+      ...prev,
+      active_sessions: prev.active_sessions.filter(s => s.id !== sessionId)
+    }));
+    setActionMsg(`Session ${sessionId} terminated immediately. Refresh token purged.`);
+    setTimeout(() => setActionMsg(null), 4000);
+  };
+
+  const handleRevokeDevice = (deviceId, deviceName) => {
+    setCustomerData(prev => ({
+      ...prev,
+      trusted_devices: prev.trusted_devices.filter(d => d.id !== deviceId)
+    }));
+    setActionMsg(`Device ${deviceName} (${deviceId}) authorization revoked. FIDO2 token deactivated.`);
+    setTimeout(() => setActionMsg(null), 4000);
+  };
+
   const handleExportDataArchive = () => {
     const exportPayload = {
       compliance: "GDPR / CCPA Subject Access Request",
@@ -378,6 +396,16 @@ export const CustomerPortalPage = ({ onNavigate }) => {
                   <p>Biometrics: <strong className="text-emerald-400">{dev.biometrics}</strong></p>
                   <p className="text-[10px] text-slate-500">Last activity recorded: {dev.last_active}</p>
                 </div>
+
+                <div className="pt-2 border-t border-white/5 flex justify-end">
+                  <button
+                    onClick={() => handleRevokeDevice(dev.id, dev.name)}
+                    className="text-red-400 hover:text-red-300 text-[10px] font-bold flex items-center gap-1 transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Revoke Device Trust</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -425,7 +453,7 @@ export const CustomerPortalPage = ({ onNavigate }) => {
 
                 {!s.is_current && (
                   <button
-                    onClick={handleTerminateOtherSessions}
+                    onClick={() => handleTerminateSession(s.id)}
                     className="text-red-400 hover:text-red-300 text-[10px] font-bold underline"
                   >
                     Revoke Access

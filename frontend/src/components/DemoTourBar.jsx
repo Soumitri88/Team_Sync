@@ -20,12 +20,26 @@ export const DemoTourBar = ({ onNavigate }) => {
   if (!demoActive || !currentDemoStep) return null;
 
   const handleAdvance = () => {
-    nextDemoStep();
-    const nextIdx = demoStep;
-    if (nextIdx < demoStepsList.length) {
-      const nextTarget = demoStepsList[nextIdx].targetPath;
-      if (nextTarget) {
-        onNavigate(nextTarget);
+    const listLen = demoStepsList?.length || 9;
+    if (demoStep < listLen) {
+      const nextIdx = demoStep; // 0-indexed next step
+      nextDemoStep();
+      if (demoStepsList && demoStepsList[nextIdx]) {
+        const target = demoStepsList[nextIdx].targetPath;
+        if (target && onNavigate) onNavigate(target);
+      }
+    } else {
+      nextDemoStep();
+    }
+  };
+
+  const handlePrevious = () => {
+    if (demoStep > 1) {
+      const prevIdx = demoStep - 2; // 0-indexed prev step
+      prevDemoStep();
+      if (demoStepsList && demoStepsList[prevIdx]) {
+        const target = demoStepsList[prevIdx].targetPath;
+        if (target && onNavigate) onNavigate(target);
       }
     }
   };
@@ -51,7 +65,7 @@ export const DemoTourBar = ({ onNavigate }) => {
         {/* Buttons */}
         <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-1 sm:pt-0 border-t border-slate-800/80 sm:border-0">
           <button
-            onClick={prevDemoStep}
+            onClick={handlePrevious}
             disabled={demoStep === 1}
             className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300 transition-colors"
             title="Previous Step"
